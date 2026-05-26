@@ -2,10 +2,10 @@ import { Link } from "react-router-dom";
 
 const Footer = () => {
   return (
-    <footer className="border-t border-zinc-100 bg-white py-12">
+    <footer className="border-t border-zinc-100 dark:border-zinc-800/60 bg-white dark:bg-zinc-950 py-12 transition-colors">
       <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
         <div className="flex items-center gap-2.5">
-          <div className="w-6 h-6 rounded-md bg-zinc-900 flex items-center justify-center text-white">
+          <div className="w-6 h-6 rounded-md bg-zinc-900 dark:bg-zinc-100 flex items-center justify-center text-white dark:text-zinc-950">
             <svg
               className="w-3.5 h-3.5"
               fill="none"
@@ -20,18 +20,24 @@ const Footer = () => {
               />
             </svg>
           </div>
-          <span className="font-bold tracking-tight text-zinc-900">
+          <span className="font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
             Invoicio
           </span>
         </div>
-        <p className="text-xs text-zinc-400 md:order-last">
+        <p className="text-xs text-zinc-500 dark:text-zinc-100 md:order-last">
           &copy; 2026 Invoicio. All rights reserved.
         </p>
-        <div className="flex gap-6 text-sm text-zinc-500">
-          <Link to="/sign-in" className="hover:text-zinc-900 transition-colors">
+        <div className="flex gap-6 text-sm text-zinc-500 dark:text-zinc-450">
+          <Link
+            to="/sign-in"
+            className="text-zinc-900 dark:text-zinc-100 transition-colors"
+          >
             Sign In
           </Link>
-          <Link to="/sign-up" className="hover:text-zinc-900 transition-colors">
+          <Link
+            to="/sign-up"
+            className="text-zinc-900 dark:text-zinc-100 transition-colors"
+          >
             Sign Up
           </Link>
         </div>
