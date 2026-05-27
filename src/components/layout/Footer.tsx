@@ -35,7 +35,7 @@ const Footer = () => {
             Sign In
           </Link>
           <Link
-            to="/sign-up"
+            to="/Sign-Up"
             className="text-zinc-900 dark:text-zinc-100 transition-colors"
           >
             Sign Up

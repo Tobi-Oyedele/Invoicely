@@ -6,7 +6,7 @@ const HowItWorks = () => {
     >
       <div className="max-w-7xl mx-auto px-6">
         <div className="text-center max-w-3xl mx-auto mb-16">
-          <h2 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-4xl">
+          <h2 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 md:text-4xl">
             How It Works
           </h2>
           <p className="mt-4 text-zinc-500 dark:text-zinc-400">
@@ -14,7 +14,7 @@ const HowItWorks = () => {
           </p>
         </div>
 
-        <div className="grid sm:grid-cols-3 gap-8 max-w-5xl mx-auto relative">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto relative">
           {/* Step 1 */}
           <div className="flex flex-col items-start">
             <div className="text-4xl font-extrabold text-zinc-900 dark:text-zinc-50 mb-4 select-none">

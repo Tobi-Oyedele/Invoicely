@@ -9,10 +9,10 @@ const Hero = () => {
         <p className="mt-6 text-lg md:text-xl text-zinc-500 dark:text-zinc-400 max-w-2xl mx-auto leading-relaxed">
           Generate, download, and manage invoices in minutes.
         </p>
-        <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+        <div className="mt-10 flex flex-col md:flex-row items-center justify-center gap-4">
           <Link
-            to="/sign-up"
-            className="w-full sm:w-auto inline-flex items-center justify-center bg-zinc-900 hover:bg-zinc-800 active:bg-zinc-950 dark:bg-zinc-100 dark:hover:bg-zinc-200 dark:active:bg-zinc-300 text-white dark:text-zinc-950 font-medium px-6 py-3 rounded-lg transition-colors shadow-xs"
+            to="/Sign-Up"
+            className="w-full md:w-auto inline-flex items-center justify-center bg-zinc-900 hover:bg-zinc-800 active:bg-zinc-950 dark:bg-zinc-100 dark:hover:bg-zinc-200 dark:active:bg-zinc-300 text-white dark:text-zinc-950 font-medium px-6 py-3 rounded-lg transition-colors shadow-xs"
           >
             Get Started for Free
           </Link>

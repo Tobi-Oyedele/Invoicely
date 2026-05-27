@@ -87,7 +87,7 @@ export const MobileMenu = ({ isOpen, onClose }: MobileMenuProps) => {
       {/* Footer controls inside full-screen menu */}
       <div className="flex flex-col gap-4">
         <Link
-          to="/sign-up"
+          to="/Sign-Up"
           onClick={onClose}
           className="w-full inline-flex items-center justify-center bg-zinc-900 hover:bg-zinc-800 active:bg-zinc-950 dark:bg-zinc-100 dark:hover:bg-zinc-200 dark:active:bg-zinc-300 text-white dark:text-zinc-950 font-bold py-4 rounded-xl transition-colors shadow-sm text-lg"
         >
