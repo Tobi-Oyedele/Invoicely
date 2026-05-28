@@ -5,6 +5,7 @@ export interface LineItem {
   description: string;
   quantity: number;
   rate: number;
+  currency?: string;
 }
 
 export interface Client {
@@ -207,11 +208,23 @@ interface InvoicePDFDocumentProps {
 
 export const InvoicePDFDocument = ({ invoice, sender }: InvoicePDFDocumentProps) => {
   const lineItems = invoice.line_items || [];
-  const subtotal = lineItems.reduce((sum, item) => sum + (item.quantity || 0) * (item.rate || 0), 0);
 
-  const formatPDFCurrency = (amount: number) => {
-    return `${invoice.currency || "NGN"} ${amount.toFixed(2)}`;
+  const formatPDFItemCurrency = (amount: number, currencyCode: string) => {
+    return `${currencyCode || "NGN"} ${amount.toFixed(2)}`;
   };
+
+  // Group line items by currency
+  const calculateGroupedTotals = () => {
+    const groups: { [key: string]: number } = {};
+    lineItems.forEach((item) => {
+      const c = item.currency || "NGN";
+      const amt = (item.quantity || 0) * (item.rate || 0);
+      groups[c] = (groups[c] || 0) + amt;
+    });
+    return groups;
+  };
+
+  const groupedTotals = calculateGroupedTotals();
 
   return (
     <Document>
@@ -290,37 +303,44 @@ export const InvoicePDFDocument = ({ invoice, sender }: InvoicePDFDocumentProps)
             </View>
           </View>
 
-          {lineItems.map((item, index) => (
-            <View key={index} style={pdfStyles.tableRow}>
-              <View style={pdfStyles.colDesc}>
-                <Text style={pdfStyles.rowColText}>{item.description}</Text>
+          {lineItems.map((item, index) => {
+            const itemCurrency = item.currency || "NGN";
+            return (
+              <View key={index} style={pdfStyles.tableRow}>
+                <View style={pdfStyles.colDesc}>
+                  <Text style={pdfStyles.rowColText}>{item.description}</Text>
+                </View>
+                <View style={pdfStyles.colQty}>
+                  <Text style={[pdfStyles.rowColText, { textAlign: "center" }]}>{item.quantity}</Text>
+                </View>
+                <View style={pdfStyles.colRate}>
+                  <Text style={[pdfStyles.rowColText, { textAlign: "right" }]}>{formatPDFItemCurrency(item.rate, itemCurrency)}</Text>
+                </View>
+                <View style={pdfStyles.colAmt}>
+                  <Text style={[pdfStyles.rowColText, { textAlign: "right" }]}>
+                    {formatPDFItemCurrency((item.quantity || 0) * (item.rate || 0), itemCurrency)}
+                  </Text>
+                </View>
               </View>
-              <View style={pdfStyles.colQty}>
-                <Text style={[pdfStyles.rowColText, { textAlign: "center" }]}>{item.quantity}</Text>
-              </View>
-              <View style={pdfStyles.colRate}>
-                <Text style={[pdfStyles.rowColText, { textAlign: "right" }]}>{formatPDFCurrency(item.rate)}</Text>
-              </View>
-              <View style={pdfStyles.colAmt}>
-                <Text style={[pdfStyles.rowColText, { textAlign: "right" }]}>
-                  {formatPDFCurrency((item.quantity || 0) * (item.rate || 0))}
-                </Text>
-              </View>
-            </View>
-          ))}
+            );
+          })}
         </View>
 
         {/* Summary Block */}
         <View style={pdfStyles.summaryContainer}>
           <View style={pdfStyles.summaryBlock}>
-            <View style={pdfStyles.summaryRow}>
-              <Text style={pdfStyles.summaryLabel}>Subtotal</Text>
-              <Text style={pdfStyles.summaryValue}>{formatPDFCurrency(subtotal)}</Text>
-            </View>
-            <View style={pdfStyles.totalRow}>
-              <Text style={pdfStyles.totalLabel}>Total Due</Text>
-              <Text style={pdfStyles.totalValue}>{formatPDFCurrency(subtotal)}</Text>
-            </View>
+            {Object.entries(groupedTotals).map(([currencyCode, sum], idx) => (
+              <View key={currencyCode} style={idx === 0 ? {} : { marginTop: 8, paddingTop: 4, borderTopWidth: 1, borderTopColor: "#f4f4f5" }}>
+                <View style={pdfStyles.summaryRow}>
+                  <Text style={pdfStyles.summaryLabel}>{`Subtotal (${currencyCode})`}</Text>
+                  <Text style={pdfStyles.summaryValue}>{formatPDFItemCurrency(sum, currencyCode)}</Text>
+                </View>
+                <View style={pdfStyles.totalRow}>
+                  <Text style={pdfStyles.totalLabel}>{`Total Due (${currencyCode})`}</Text>
+                  <Text style={pdfStyles.totalValue}>{formatPDFItemCurrency(sum, currencyCode)}</Text>
+                </View>
+              </View>
+            ))}
           </View>
         </View>
 

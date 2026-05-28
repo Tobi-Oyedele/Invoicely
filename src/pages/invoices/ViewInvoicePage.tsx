@@ -145,14 +145,14 @@ const ViewInvoicePage = ({ defaultEditing = false, idOverride }: ViewInvoicePage
         if (idx !== index) return item;
         return {
           ...item,
-          [field]: field === "description" ? String(value) : Number(value),
+          [field]: field === "description" || field === "currency" ? String(value) : Number(value),
         };
       })
     );
   };
 
   const addLineItem = () => {
-    setLineItems((prev) => [...prev, { description: "", quantity: 1, rate: 0 }]);
+    setLineItems((prev) => [...prev, { description: "", quantity: 1, rate: 0, currency: currency || "NGN" }]);
   };
 
   const removeLineItem = (index: number) => {
@@ -160,14 +160,12 @@ const ViewInvoicePage = ({ defaultEditing = false, idOverride }: ViewInvoicePage
     setLineItems((prev) => prev.filter((_, idx) => idx !== index));
   };
 
-  const calculateSubtotal = () => {
-    return lineItems.reduce((sum, item) => sum + (item.quantity || 0) * (item.rate || 0), 0);
-  };
 
-  const formatCurrency = (amount: number) => {
+
+  const formatCurrency = (amount: number, currencyCode?: string) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
-      currency: currency || "NGN",
+      currency: currencyCode || currency || "NGN",
       minimumFractionDigits: 2,
     }).format(amount);
   };
@@ -203,7 +201,7 @@ const ViewInvoicePage = ({ defaultEditing = false, idOverride }: ViewInvoicePage
           issue_date: issueDate,
           due_date: dueDate || null,
           notes: notes.trim() || null,
-          currency: currency,
+          currency: lineItems[0]?.currency || "NGN",
         })
         .eq("id", id);
 
@@ -221,6 +219,7 @@ const ViewInvoicePage = ({ defaultEditing = false, idOverride }: ViewInvoicePage
         description: item.description.trim(),
         quantity: item.quantity,
         rate: item.rate,
+        currency: item.currency || "NGN",
       }));
 
       // Insert the new line items first
@@ -487,7 +486,7 @@ const ViewInvoicePage = ({ defaultEditing = false, idOverride }: ViewInvoicePage
               <span>Invoice Specifications</span>
             </h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               <div>
                 <label
                   htmlFor="edit_invoice_number"
@@ -538,27 +537,6 @@ const ViewInvoicePage = ({ defaultEditing = false, idOverride }: ViewInvoicePage
                   onChange={(e) => setDueDate(e.target.value)}
                   className="block w-full px-3.5 py-2.5 text-sm bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-600 focus:ring-1 focus:ring-zinc-400 dark:focus:ring-zinc-600 transition-all disabled:opacity-50"
                 />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="edit_currency"
-                  className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider mb-1.5"
-                >
-                  Currency
-                </label>
-                <select
-                  id="edit_currency"
-                  disabled={submitting}
-                  value={currency}
-                  onChange={(e) => setCurrency(e.target.value)}
-                  className="block w-full px-3.5 py-2.5 text-sm bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-600 focus:ring-1 focus:ring-zinc-400 dark:focus:ring-zinc-600 transition-all cursor-pointer"
-                >
-                  <option value="NGN">NGN (₦)</option>
-                  <option value="USD">USD ($)</option>
-                  <option value="EUR">EUR (€)</option>
-                  <option value="GBP">GBP (£)</option>
-                </select>
               </div>
             </div>
           </div>
@@ -731,10 +709,10 @@ const ViewInvoicePage = ({ defaultEditing = false, idOverride }: ViewInvoicePage
                         {item.quantity}
                       </td>
                       <td className="py-4 text-right text-zinc-500 dark:text-zinc-400">
-                        {formatCurrency(item.rate)}
+                        {formatCurrency(item.rate, item.currency || "NGN")}
                       </td>
                       <td className="py-4 text-right font-semibold">
-                        {formatCurrency((item.quantity || 0) * (item.rate || 0))}
+                        {formatCurrency((item.quantity || 0) * (item.rate || 0), item.currency || "NGN")}
                       </td>
                     </tr>
                   ))}
@@ -744,40 +722,59 @@ const ViewInvoicePage = ({ defaultEditing = false, idOverride }: ViewInvoicePage
 
             {/* Mobile items stacked list */}
             <div className="block sm:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
-              {lineItems.map((item, index) => (
-                <div key={index} className="py-4 flex flex-col gap-2">
-                  <span className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">
-                    {item.description}
-                  </span>
-                  <div className="flex justify-between items-center text-xs text-zinc-500 dark:text-zinc-400">
-                    <span className="select-none">
-                      {item.quantity} × {formatCurrency(item.rate)}
+              {lineItems.map((item, index) => {
+                const itemCurrency = item.currency || "NGN";
+                return (
+                  <div key={index} className="py-4 flex flex-col gap-2">
+                    <span className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">
+                      {item.description}
                     </span>
-                    <span className="font-bold text-zinc-900 dark:text-zinc-50 text-sm">
-                      {formatCurrency((item.quantity || 0) * (item.rate || 0))}
-                    </span>
+                    <div className="flex justify-between items-center text-xs text-zinc-550 dark:text-zinc-450">
+                      <span className="select-none">
+                        {item.quantity} × {formatCurrency(item.rate, itemCurrency)}
+                      </span>
+                      <span className="font-bold text-zinc-900 dark:text-zinc-50 text-sm">
+                        {formatCurrency((item.quantity || 0) * (item.rate || 0), itemCurrency)}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Total summary board */}
-            <div className="mt-6 pt-6 border-t border-zinc-100 dark:border-zinc-800 flex justify-end">
-              <div className="w-full sm:w-80 space-y-3 text-sm select-none">
-                <div className="flex justify-between items-center text-zinc-550 dark:text-zinc-400">
-                  <span>Subtotal:</span>
-                  <span className="font-medium text-zinc-900 dark:text-zinc-200">
-                    {formatCurrency(calculateSubtotal())}
-                  </span>
+            {(() => {
+              // Group and sum items by currency for totals
+              const groups: { [key: string]: number } = {};
+              lineItems.forEach((item) => {
+                const c = item.currency || "NGN";
+                const amt = (item.quantity || 0) * (item.rate || 0);
+                groups[c] = (groups[c] || 0) + amt;
+              });
+
+              return (
+                <div className="mt-6 pt-6 border-t border-zinc-100 dark:border-zinc-800 flex justify-end">
+                  <div className="w-full sm:w-80 space-y-4 text-sm select-none">
+                    {Object.entries(groups).map(([currencyCode, sum]) => (
+                      <div key={currencyCode} className="space-y-1.5 pb-2 border-b border-zinc-50 dark:border-zinc-850/50 last:border-b-0">
+                        <div className="flex justify-between items-center text-zinc-550 dark:text-zinc-400">
+                          <span>Subtotal ({currencyCode}):</span>
+                          <span className="font-medium text-zinc-900 dark:text-zinc-200">
+                            {formatCurrency(sum, currencyCode)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center border-t border-zinc-900 dark:border-zinc-100 pt-1.5 text-zinc-900 dark:text-zinc-50">
+                          <span className="font-bold text-sm">Total Due ({currencyCode}):</span>
+                          <span className="font-black text-base tracking-tight">
+                            {formatCurrency(sum, currencyCode)}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex justify-between items-center border-t border-zinc-900 dark:border-zinc-100 pt-3 text-zinc-900 dark:text-zinc-50">
-                  <span className="font-bold text-base">Total Due ({currency}):</span>
-                  <span className="font-black text-xl tracking-tight">
-                    {formatCurrency(calculateSubtotal())}
-                  </span>
-                </div>
-              </div>
-            </div>
+              );
+            })()}
           </div>
 
           {/* Section 4: Bank Payment Instructions */}

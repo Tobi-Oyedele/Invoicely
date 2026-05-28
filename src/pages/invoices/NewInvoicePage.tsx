@@ -44,9 +44,9 @@ const NewInvoicePage = () => {
   const [dueDate, setDueDate] = useState("");
   const [selectedClientId, setSelectedClientId] = useState("");
   const [notes, setNotes] = useState("");
-  const [currency, setCurrency] = useState("NGN");
+  const currency = "NGN";
   const [lineItems, setLineItems] = useState<LineItem[]>([
-    { description: "", quantity: 1, rate: 0 },
+    { description: "", quantity: 1, rate: 0, currency: "NGN" },
   ]);
 
   const suggestInvoiceNumber = (existingInvoices: { invoice_number: string }[]) => {
@@ -138,14 +138,14 @@ const NewInvoicePage = () => {
         if (idx !== index) return item;
         return {
           ...item,
-          [field]: field === "description" ? value : Number(value),
+          [field]: field === "description" || field === "currency" ? String(value) : Number(value),
         };
       })
     );
   };
 
   const addLineItem = () => {
-    setLineItems((prev) => [...prev, { description: "", quantity: 1, rate: 0 }]);
+    setLineItems((prev) => [...prev, { description: "", quantity: 1, rate: 0, currency: currency || "NGN" }]);
   };
 
   const removeLineItem = (index: number) => {
@@ -224,7 +224,7 @@ const NewInvoicePage = () => {
             due_date: dueDate || null,
             notes: notes.trim() || null,
             status: "draft", // Defaults to draft
-            currency: currency,
+            currency: lineItems[0]?.currency || "NGN",
           })
           .select()
           .single();
@@ -259,6 +259,7 @@ const NewInvoicePage = () => {
         description: item.description.trim(),
         quantity: item.quantity,
         rate: item.rate,
+        currency: item.currency || currency || "NGN",
       }));
 
       const { error: linesError } = await supabase.from("line_items").insert(itemsToInsert);
@@ -423,7 +424,7 @@ const NewInvoicePage = () => {
             <span>Invoice Specifications</span>
           </h3>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             <div>
               <label
                 htmlFor="invoice_number"
@@ -480,27 +481,6 @@ const NewInvoicePage = () => {
                   className="block w-full pl-9 pr-3.5 py-2.5 text-sm bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-600 focus:ring-1 focus:ring-zinc-400 dark:focus:ring-zinc-600 transition-all disabled:opacity-50"
                 />
               </div>
-            </div>
-
-            <div>
-              <label
-                htmlFor="currency"
-                className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider mb-1.5"
-              >
-                Currency
-              </label>
-              <select
-                id="currency"
-                disabled={submitting}
-                value={currency}
-                onChange={(e) => setCurrency(e.target.value)}
-                className="block w-full px-3.5 py-2.5 text-sm bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-600 focus:ring-1 focus:ring-zinc-400 dark:focus:ring-zinc-600 transition-all cursor-pointer"
-              >
-                <option value="NGN">NGN (₦)</option>
-                <option value="USD">USD ($)</option>
-                <option value="EUR">EUR (€)</option>
-                <option value="GBP">GBP (£)</option>
-              </select>
             </div>
           </div>
         </div>

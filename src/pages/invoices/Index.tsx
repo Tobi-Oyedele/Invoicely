@@ -22,6 +22,7 @@ interface LineItem {
   description: string;
   quantity: number;
   rate: number;
+  currency?: string | null;
 }
 
 interface Client {
@@ -176,9 +177,15 @@ const InvoicesPage = () => {
     }
   };
 
-  // Helper: calculate total invoice amount
-  const calculateTotal = (lineItems: LineItem[] = []) => {
-    return lineItems.reduce((sum, item) => sum + (item.quantity || 0) * (item.rate || 0), 0);
+  // Helper: calculate grouped total invoice amounts by currency
+  const calculateGroupedTotals = (lineItems: LineItem[] = []) => {
+    const groups: { [key: string]: number } = {};
+    lineItems.forEach((item) => {
+      const c = item.currency || "NGN";
+      const amt = (item.quantity || 0) * (item.rate || 0);
+      groups[c] = (groups[c] || 0) + amt;
+    });
+    return groups;
   };
 
   // Helper: format Currency
@@ -404,7 +411,18 @@ const InvoicesPage = () => {
                       )}
                     </td>
                     <td className="px-6 py-4.5 text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-                      {formatCurrency(calculateTotal(invoice.line_items), invoice.currency || "NGN")}
+                      {(() => {
+                        const grouped = calculateGroupedTotals(invoice.line_items);
+                        return (
+                          <div className="space-y-0.5">
+                            {Object.entries(grouped).map(([currencyCode, sum]) => (
+                              <div key={currencyCode} className="whitespace-nowrap">
+                                {formatCurrency(sum, currencyCode)}
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td className="px-6 py-4.5">
                       <button
@@ -476,9 +494,20 @@ const InvoicesPage = () => {
                     <FiCalendar className="w-3.5 h-3.5 opacity-60" />
                     <span>Due: {invoice.due_date || "—"}</span>
                   </div>
-                  <span className="font-bold text-zinc-900 dark:text-zinc-50 text-sm">
-                    {formatCurrency(calculateTotal(invoice.line_items), invoice.currency || "NGN")}
-                  </span>
+                  <div className="text-right">
+                    {(() => {
+                      const grouped = calculateGroupedTotals(invoice.line_items);
+                      return (
+                        <div className="space-y-0.5">
+                          {Object.entries(grouped).map(([currencyCode, sum]) => (
+                            <div key={currencyCode} className="font-bold text-zinc-900 dark:text-zinc-50 text-sm">
+                              {formatCurrency(sum, currencyCode)}
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </div>
                 </div>
               </div>
             ))}
