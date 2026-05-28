@@ -1,11 +1,14 @@
 import { useState } from "react";
 import { NavLink, useNavigate, Link } from "react-router-dom";
+import { FiSun, FiMoon } from "react-icons/fi";
 import { supabase } from "../../lib/supabase";
 import { navItems } from "../../data/navigation";
+import { useTheme } from "../../hooks/useTheme";
 
 const Sidebar = () => {
   const navigate = useNavigate();
   const [loggingOut, setLoggingOut] = useState(false);
+  const [theme, setTheme] = useTheme();
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -46,26 +49,58 @@ const Sidebar = () => {
       </div>
 
       {/* Navigation Links */}
-      <nav className="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto">
-        {navItems.map((item) => (
-          <NavLink
-            key={item.name}
-            to={item.to}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3.5 py-2.5 text-sm font-medium rounded-lg transition-colors ${
-                isActive
-                  ? "bg-zinc-100 text-zinc-900 dark:bg-zinc-900 dark:text-zinc-50"
-                  : "text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-900/50"
-              }`
-            }
-          >
-            {item.icon}
-            <span>{item.name}</span>
-          </NavLink>
-        ))}
+      <nav className="flex-1 px-4 py-6 overflow-y-auto flex flex-col justify-between">
+        <div className="space-y-1.5">
+          {navItems.map((item) => (
+            <NavLink
+              key={item.name}
+              to={item.to}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3.5 py-2.5 text-sm font-medium rounded-lg transition-colors ${
+                  isActive
+                    ? "bg-zinc-100 text-zinc-900 dark:bg-zinc-900 dark:text-zinc-50"
+                    : "text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:text-zinc-200 dark:hover:bg-zinc-900/50"
+                }`
+              }
+            >
+              {item.icon}
+              <span>{item.name}</span>
+            </NavLink>
+          ))}
+        </div>
+
+        {/* Theme Switcher */}
+        <div className="pt-6 mt-auto">
+          <div className="flex items-center justify-between p-1 bg-zinc-100 dark:bg-zinc-900 rounded-lg transition-colors">
+            <button
+              type="button"
+              onClick={() => setTheme("light")}
+              className={`flex-1 flex items-center justify-center gap-2 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                theme === "light"
+                  ? "bg-white text-zinc-900 shadow-sm"
+                  : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
+              }`}
+            >
+              <FiSun className="w-4 h-4 shrink-0" />
+              <span>Light</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setTheme("dark")}
+              className={`flex-1 flex items-center justify-center gap-2 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                theme === "dark"
+                  ? "bg-zinc-800 text-zinc-50 shadow-sm"
+                  : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
+              }`}
+            >
+              <FiMoon className="w-4 h-4 shrink-0" />
+              <span>Dark</span>
+            </button>
+          </div>
+        </div>
       </nav>
 
-      {/* Logout Separated at the Bottom */}
+      {/* Logout button */}
       <div className="p-4 border-t border-zinc-200 dark:border-zinc-800">
         <button
           onClick={handleLogout}
