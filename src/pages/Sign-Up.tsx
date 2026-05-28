@@ -13,7 +13,6 @@ const SignUpPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [profession, setProfession] = useState("");
-  const [businessName, setBusinessName] = useState("");
 
   // UI State
   const [loading, setLoading] = useState(false);
@@ -48,7 +47,6 @@ const SignUpPage = () => {
         last_name: lastName,
         email: email,
         profession: profession,
-        business_name: businessName.trim() || null,
       });
 
       if (profileError) {
@@ -247,28 +245,6 @@ const SignUpPage = () => {
                 value={profession}
                 onChange={(e) => setProfession(e.target.value)}
                 placeholder="e.g. Freelancer, Designer, Developer"
-                className="block w-full px-3.5 py-2.5 text-sm bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 border border-zinc-200 dark:border-zinc-800 rounded-lg placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-600 focus:ring-1 focus:ring-zinc-400 dark:focus:ring-zinc-600 transition-all disabled:opacity-50"
-              />
-            </div>
-
-            {/* Business Name (Optional) Field */}
-            <div>
-              <label
-                htmlFor="business-name"
-                className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider mb-1.5"
-              >
-                Business Name{" "}
-                <span className="text-zinc-400 dark:text-zinc-500 font-normal normal-case italic">
-                  (Optional)
-                </span>
-              </label>
-              <input
-                id="business-name"
-                name="businessName"
-                type="text"
-                disabled={loading}
-                value={businessName}
-                onChange={(e) => setBusinessName(e.target.value)}
                 className="block w-full px-3.5 py-2.5 text-sm bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 border border-zinc-200 dark:border-zinc-800 rounded-lg placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-600 focus:ring-1 focus:ring-zinc-400 dark:focus:ring-zinc-600 transition-all disabled:opacity-50"
               />
             </div>
