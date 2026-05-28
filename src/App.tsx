@@ -8,6 +8,9 @@ import ViewInvoicePage from "./pages/invoices/ViewInvoicePage";
 import EditInvoicePage from "./pages/invoices/EditInvoicePage";
 import SignInPage from "./pages/Sign-in";
 import SignUpPage from "./pages/Sign-Up";
+import Dashboard from "./pages/Dashboard";
+import Settings from "./pages/Settings";
+import DashboardLayout from "./components/layout/DashboardLayout";
 
 const App = () => {
   return (
@@ -15,12 +18,18 @@ const App = () => {
       <Route path="/" element={<Home />} />
       <Route path="/sign-in" element={<SignInPage />} />
       <Route path="/sign-Up" element={<SignUpPage />} />
-      <Route path="/clients" element={<Clients />} />
-      <Route path="/profile" element={<Profile />} />
-      <Route path="/invoices" element={<InvoicesPage />} />
-      <Route path="/invoices/new" element={<NewInvoicePage />} />
-      <Route path="/invoices/:id" element={<ViewInvoicePage />} />
-      <Route path="/invoices/:id/edit" element={<EditInvoicePage />} />
+
+      {/* Authenticated Dashboard Routes (Shared Sidebar) */}
+      <Route element={<DashboardLayout />}>
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/clients" element={<Clients />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="/invoices" element={<InvoicesPage />} />
+        <Route path="/invoices/new" element={<NewInvoicePage />} />
+        <Route path="/invoices/:id" element={<ViewInvoicePage />} />
+        <Route path="/invoices/:id/edit" element={<EditInvoicePage />} />
+      </Route>
     </Routes>
   );
 };

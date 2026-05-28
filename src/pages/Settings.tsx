@@ -1,21 +1,21 @@
-const InvoicesPage = () => {
+const Settings = () => {
   return (
     <main className="py-10 px-6 max-w-7xl mx-auto">
       <div className="mb-8">
         <h1 className="text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
-          Invoices
+          Settings
         </h1>
         <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-          Create, manage, and view status history of all billing invoices.
+          Configure your personal profile and invoice preferences.
         </p>
       </div>
 
       {/* Placeholder Area */}
       <div className="border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl h-96 flex items-center justify-center text-zinc-400 dark:text-zinc-500 text-sm">
-        Invoice management console is coming soon...
+        Settings management is coming soon...
       </div>
     </main>
   );
 };
 
-export default InvoicesPage;
+export default Settings;

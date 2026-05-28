@@ -55,8 +55,8 @@ const SignUpPage = () => {
         throw profileError;
       }
 
-      // 3. Redirect to /invoices
-      navigate("/invoices");
+      // 3. Redirect to /dashboard
+      navigate("/dashboard");
     } catch (err: any) {
       setError(err?.message || "An unexpected error occurred during sign up.");
     } finally {
