@@ -22,7 +22,7 @@ export const PersonalInfoSection = ({
       <h3 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-4 border-b border-zinc-100 dark:border-zinc-800 pb-2">
         Personal Information
       </h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <div>
           <label
             htmlFor="first_name"
@@ -59,7 +59,7 @@ export const PersonalInfoSection = ({
           />
         </div>
 
-        <div className="md:col-span-2">
+        <div className="lg:col-span-2">
           <label
             htmlFor="profession"
             className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider mb-1.5"

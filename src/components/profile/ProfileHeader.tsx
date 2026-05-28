@@ -24,18 +24,18 @@ export const ProfileHeader = ({
   };
 
   return (
-    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 p-6 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-100 dark:border-zinc-900/50 transition-all mb-8">
+    <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 p-6 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-100 dark:border-zinc-900/50 transition-all mb-8">
       <div className="flex items-center gap-4">
-        <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-linear-to-tr from-zinc-900 to-zinc-600 dark:from-zinc-100 dark:to-zinc-300 text-white dark:text-zinc-950 flex items-center justify-center text-xl font-bold tracking-tight shadow-sm select-none shrink-0">
+        <div className="w-14 h-14 lg:w-16 lg:h-16 rounded-full bg-linear-to-tr from-zinc-900 to-zinc-600 dark:from-zinc-100 dark:to-zinc-300 text-white dark:text-zinc-950 flex items-center justify-center text-xl font-bold tracking-tight shadow-sm select-none shrink-0">
           {getInitials()}
         </div>
         <div>
-          <h2 className="text-lg md:text-xl font-extrabold text-zinc-900 dark:text-zinc-50 leading-tight">
+          <h2 className="text-lg lg:text-xl font-extrabold text-zinc-900 dark:text-zinc-50 leading-tight">
             {firstName || lastName
               ? `${firstName} ${lastName}`.trim()
               : "Your Profile"}
           </h2>
-          <p className="text-xs md:text-sm text-zinc-500 dark:text-zinc-400 font-medium mt-0.5">
+          <p className="text-xs lg:text-sm text-zinc-500 dark:text-zinc-400 font-medium mt-0.5">
             {profession || "Your Profession"}
           </p>
           <div className="flex items-center gap-1.5 mt-2 text-xs text-zinc-400 dark:text-zinc-500">
@@ -45,7 +45,7 @@ export const ProfileHeader = ({
         </div>
       </div>
 
-      <div className="w-full md:w-auto flex flex-col gap-1.5 md:min-w-64">
+      <div className="w-full lg:w-auto flex flex-col gap-1.5 lg:min-w-64">
         <span className="block text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">
           Email Address
         </span>

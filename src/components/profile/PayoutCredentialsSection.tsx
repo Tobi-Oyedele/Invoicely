@@ -22,7 +22,7 @@ export const PayoutCredentialsSection = ({
       <h3 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-4 border-b border-zinc-100 dark:border-zinc-800 pb-2">
         Payout Credentials
       </h3>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div>
           <label
             htmlFor="bank_name"

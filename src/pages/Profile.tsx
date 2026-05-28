@@ -52,7 +52,7 @@ const Profile = () => {
         setFetching(true);
         setErrorMsg(null);
 
-        // 1. Get logged-in user session
+        // 1. Get logged-in user session (guaranteed by protected routes)
         const {
           data: { user },
           error: authError,
@@ -139,17 +139,17 @@ const Profile = () => {
   // Loading skeleton view
   if (fetching) {
     return (
-      <main className="py-6 px-4 md:py-10 md:px-8 max-w-4xl mx-auto animate-pulse">
+      <main className="py-6 px-4 lg:py-10 lg:px-8 max-w-4xl mx-auto animate-pulse">
         <div className="mb-8">
           <div className="h-8 w-32 bg-zinc-200 dark:bg-zinc-800 rounded-md"></div>
           <div className="h-4 w-72 bg-zinc-200 dark:bg-zinc-800 rounded-md mt-2"></div>
         </div>
 
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 md:p-8 space-y-6">
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 lg:p-8 space-y-6">
           <div className="h-28 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-100 dark:border-zinc-900/50"></div>
           <div className="space-y-4">
             <div className="h-4 w-28 bg-zinc-200 dark:bg-zinc-800 rounded"></div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className="h-10 bg-zinc-100 dark:bg-zinc-950 rounded-lg"></div>
               <div className="h-10 bg-zinc-100 dark:bg-zinc-950 rounded-lg"></div>
             </div>
@@ -161,19 +161,19 @@ const Profile = () => {
   }
 
   return (
-    <main className="py-6 px-4 md:py-10 md:px-8 max-w-4xl mx-auto selection:bg-zinc-100 dark:selection:bg-zinc-800 transition-all">
+    <main className="py-6 px-4 lg:py-10 lg:px-8 max-w-4xl mx-auto selection:bg-zinc-100 dark:selection:bg-zinc-800 transition-all">
       {/* Header section */}
       <div className="mb-8">
-        <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
+        <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
           Profile
         </h1>
-        <p className="mt-1 md:mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+        <p className="mt-1 lg:mt-2 text-sm text-zinc-500 dark:text-zinc-400">
           Manage your personal details and business credentials.
         </p>
       </div>
 
       {/* Main card */}
-      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xs p-6 md:p-8 transition-colors">
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xs p-6 lg:p-8 transition-colors">
         {/* Profile identity summary block */}
         <ProfileHeader
           firstName={firstName}
@@ -225,7 +225,7 @@ const Profile = () => {
             <button
               type="submit"
               disabled={saving}
-              className="bg-zinc-900 hover:bg-zinc-800 active:bg-zinc-950 text-white dark:bg-zinc-100 dark:hover:bg-zinc-200 dark:active:bg-zinc-300 dark:text-zinc-950 rounded-lg px-6 py-2.5 text-sm font-semibold transition-all shadow-xs cursor-pointer flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed w-full md:w-auto"
+              className="bg-zinc-900 hover:bg-zinc-800 active:bg-zinc-950 text-white dark:bg-zinc-100 dark:hover:bg-zinc-200 dark:active:bg-zinc-300 dark:text-zinc-950 rounded-lg px-6 py-2.5 text-sm font-semibold transition-all shadow-xs cursor-pointer flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed w-full lg:w-auto"
             >
               {saving ? (
                 <>
