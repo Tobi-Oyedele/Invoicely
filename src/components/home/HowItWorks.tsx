@@ -24,8 +24,8 @@ const HowItWorks = () => {
               Enter Details
             </h3>
             <p className="text-zinc-500 dark:text-zinc-400 leading-relaxed text-sm">
-              Add your business info, client details, and custom terms in
-              intuitive, clean fields.
+              Enter your business details, client information, and payment
+              details.
             </p>
           </div>
 
