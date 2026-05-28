@@ -4,7 +4,6 @@ import { formatDate } from "../../utils/date";
 interface ProfileHeaderProps {
   firstName: string;
   lastName: string;
-  profession: string;
   createdAt: string;
   email: string;
 }
@@ -12,7 +11,6 @@ interface ProfileHeaderProps {
 export const ProfileHeader = ({
   firstName,
   lastName,
-  profession,
   createdAt,
   email,
 }: ProfileHeaderProps) => {
@@ -35,9 +33,6 @@ export const ProfileHeader = ({
               ? `${firstName} ${lastName}`.trim()
               : "Your Profile"}
           </h2>
-          <p className="text-xs lg:text-sm text-zinc-500 dark:text-zinc-400 font-medium mt-0.5">
-            {profession || "Your Profession"}
-          </p>
           <div className="flex items-center gap-1.5 mt-2 text-xs text-zinc-400 dark:text-zinc-500">
             <FiCalendar className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
             <span>Joined {formatDate(createdAt)}</span>

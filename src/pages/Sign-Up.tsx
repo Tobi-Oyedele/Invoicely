@@ -14,7 +14,6 @@ const SignUpPage = () => {
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [profession, setProfession] = useState("");
 
   // UI State
   const [loading, setLoading] = useState(false);
@@ -48,7 +47,6 @@ const SignUpPage = () => {
         first_name: firstName,
         last_name: lastName,
         email: email,
-        profession: profession,
       });
 
       if (profileError) {
@@ -88,8 +86,6 @@ const SignUpPage = () => {
             setEmail={setEmail}
             password={password}
             setPassword={setPassword}
-            profession={profession}
-            setProfession={setProfession}
             loading={loading}
             showPassword={showPassword}
             setShowPassword={setShowPassword}

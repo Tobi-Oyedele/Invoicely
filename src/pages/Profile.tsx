@@ -11,7 +11,6 @@ const Profile = () => {
   // Form state fields
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [profession, setProfession] = useState("");
   const [businessName, setBusinessName] = useState("");
   const [city, setCity] = useState("");
   const [country, setCountry] = useState("");
@@ -83,7 +82,6 @@ const Profile = () => {
         if (profile) {
           setFirstName(profile.first_name || "");
           setLastName(profile.last_name || "");
-          setProfession(profile.profession || "");
           setBusinessName(profile.business_name || "");
           setCity(profile.city || "");
           setCountry(profile.country || "");
@@ -127,7 +125,6 @@ const Profile = () => {
         first_name: firstName.trim() || null,
         last_name: lastName.trim() || null,
         email: email, // Read-only but kept stored
-        profession: profession.trim() || null,
         business_name: businessName.trim() || null,
         city: city.trim() || null,
         country: country.trim() || null,
@@ -194,7 +191,6 @@ const Profile = () => {
         <ProfileHeader
           firstName={firstName}
           lastName={lastName}
-          profession={profession}
           createdAt={createdAt}
           email={email}
         />
@@ -209,8 +205,6 @@ const Profile = () => {
             setFirstName={setFirstName}
             lastName={lastName}
             setLastName={setLastName}
-            profession={profession}
-            setProfession={setProfession}
             saving={saving}
           />
 
