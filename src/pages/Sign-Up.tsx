@@ -57,8 +57,9 @@ const SignUpPage = () => {
 
       // 3. Redirect to /dashboard
       navigate("/dashboard");
-    } catch (err: any) {
-      setError(err?.message || "An unexpected error occurred during sign up.");
+    } catch (err) {
+      const error = err as Error;
+      setError(error.message || "An unexpected error occurred during sign up.");
     } finally {
       setLoading(false);
     }

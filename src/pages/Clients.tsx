@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { FiUser, FiPlus } from "react-icons/fi";
 import { ClientsHeader } from "../components/client/ClientsHeader";
@@ -20,12 +20,11 @@ interface Client {
 }
 
 const Clients = () => {
-  // Client list and search states
   const [clients, setClients] = useState<Client[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  // Modal and active client states
+  // Modal toggles & dropdown contexts
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
@@ -45,28 +44,7 @@ const Clients = () => {
   const [submitting, setSubmitting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  // Load clients on component mount
-  useEffect(() => {
-    fetchClients();
-  }, []);
-
-  // Close dropdown menu on viewport scroll or resize to keep it positioned correctly
-  useEffect(() => {
-    if (activeMenuId) {
-      const handleClose = () => {
-        setActiveMenuId(null);
-        setMenuPosition(null);
-      };
-      window.addEventListener("scroll", handleClose, true);
-      window.addEventListener("resize", handleClose);
-      return () => {
-        window.removeEventListener("scroll", handleClose, true);
-        window.removeEventListener("resize", handleClose);
-      };
-    }
-  }, [activeMenuId]);
-
-  const fetchClients = async () => {
+  const fetchClients = useCallback(async () => {
     try {
       setLoading(true);
       const {
@@ -86,12 +64,43 @@ const Clients = () => {
 
       if (dbError) throw dbError;
       setClients(data || []);
-    } catch (err: any) {
-      console.error("Error fetching clients:", err);
+    } catch (err) {
+      const error = err as Error;
+      console.error("Error fetching clients:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  // Load clients on component mount
+  useEffect(() => {
+    let active = true;
+    const timer = setTimeout(() => {
+      if (active) {
+        fetchClients();
+      }
+    }, 0);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [fetchClients]);
+
+  // Close dropdown menu on viewport scroll or resize to keep it positioned correctly
+  useEffect(() => {
+    if (activeMenuId) {
+      const handleClose = () => {
+        setActiveMenuId(null);
+        setMenuPosition(null);
+      };
+      window.addEventListener("scroll", handleClose, true);
+      window.addEventListener("resize", handleClose);
+      return () => {
+        window.removeEventListener("scroll", handleClose, true);
+        window.removeEventListener("resize", handleClose);
+      };
+    }
+  }, [activeMenuId]);
 
   // Open modal for adding a new client
   const openAddModal = () => {
@@ -199,9 +208,10 @@ const Clients = () => {
       }
 
       setIsFormModalOpen(false);
-    } catch (err: any) {
-      console.error("Error submitting client form:", err);
-      setActionError(err.message || "Failed to save client details.");
+    } catch (err) {
+      const error = err as Error;
+      console.error("Error submitting client form:", error);
+      setActionError(error.message || "Failed to save client details.");
     } finally {
       setSubmitting(false);
     }
@@ -225,9 +235,10 @@ const Clients = () => {
       // Remove locally
       setClients((prev) => prev.filter((c) => c.id !== selectedClient.id));
       setIsDeleteModalOpen(false);
-    } catch (err: any) {
-      console.error("Error deleting client:", err);
-      setActionError(err.message || "Failed to delete client.");
+    } catch (err) {
+      const error = err as Error;
+      console.error("Error deleting client:", error);
+      setActionError(error.message || "Failed to delete client.");
     } finally {
       setSubmitting(false);
     }

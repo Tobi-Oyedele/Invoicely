@@ -38,8 +38,9 @@ const SignInPage = () => {
 
       // Redirect to /dashboard
       navigate("/dashboard");
-    } catch (err: any) {
-      setError(err?.message || "An unexpected error occurred during sign in.");
+    } catch (err) {
+      const error = err as Error;
+      setError(error.message || "An unexpected error occurred during sign in.");
     } finally {
       setLoading(false);
     }
@@ -62,8 +63,9 @@ const SignInPage = () => {
       }
 
       setSuccessMsg("A password reset link has been sent to your email address.");
-    } catch (err: any) {
-      setError(err?.message || "An unexpected error occurred while requesting reset.");
+    } catch (err) {
+      const error = err as Error;
+      setError(error.message || "An unexpected error occurred while requesting reset.");
     } finally {
       setLoading(false);
     }

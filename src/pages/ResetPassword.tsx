@@ -46,9 +46,10 @@ const ResetPassword = () => {
       setTimeout(() => {
         navigate("/sign-in");
       }, 3000);
-    } catch (err: any) {
-      console.error("Error resetting password:", err);
-      setErrorMsg(err?.message || "Failed to update your password. Please try again.");
+    } catch (err) {
+      const error = err as Error;
+      console.error("Error resetting password:", error);
+      setErrorMsg(error.message || "Failed to update your password. Please try again.");
     } finally {
       setLoading(false);
     }

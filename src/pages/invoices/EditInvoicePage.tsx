@@ -1,5 +1,9 @@
+import { useParams } from "react-router-dom";
+import ViewInvoicePage from "./ViewInvoicePage";
+
 const EditInvoicePage = () => {
-  return <div>EditInvoicePage</div>;
+  const { id } = useParams<{ id: string }>();
+  return <ViewInvoicePage defaultEditing={true} idOverride={id} />;
 };
 
 export default EditInvoicePage;

@@ -99,9 +99,10 @@ const Profile = () => {
           // If profile row doesn't exist yet, we initialize registration date from auth user metadata
           setCreatedAt(user.created_at || "");
         }
-      } catch (err: any) {
-        console.error("Error loading profile:", err);
-        setErrorMsg(err?.message || "Failed to load profile settings.");
+      } catch (err) {
+        const error = err as Error;
+        console.error("Error loading profile:", error);
+        setErrorMsg(error.message || "Failed to load profile settings.");
       } finally {
         setFetching(false);
       }
@@ -142,9 +143,10 @@ const Profile = () => {
       if (upsertError) throw upsertError;
 
       setSuccessMsg("Changes saved successfully.");
-    } catch (err: any) {
-      console.error("Error saving profile:", err);
-      setErrorMsg(err?.message || "An unexpected error occurred while saving.");
+    } catch (err) {
+      const error = err as Error;
+      console.error("Error saving profile:", error);
+      setErrorMsg(error.message || "An unexpected error occurred while saving.");
     } finally {
       setSaving(false);
     }

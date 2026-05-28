@@ -28,7 +28,7 @@ export const formatDate = (dateString?: string): string => {
     const year = date.getFullYear();
 
     return `${day} ${month}, ${year}`;
-  } catch (e) {
+  } catch {
     return dateString || "";
   }
 };
