@@ -8,6 +8,7 @@ import ViewInvoicePage from "./pages/invoices/ViewInvoicePage";
 import EditInvoicePage from "./pages/invoices/EditInvoicePage";
 import SignInPage from "./pages/Sign-in";
 import SignUpPage from "./pages/Sign-Up";
+import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import Settings from "./pages/Settings";
 import DashboardLayout from "./components/layout/DashboardLayout";
@@ -18,6 +19,7 @@ const App = () => {
       <Route path="/" element={<Home />} />
       <Route path="/sign-in" element={<SignInPage />} />
       <Route path="/sign-Up" element={<SignUpPage />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
 
       {/* Authenticated Dashboard Routes (Shared Sidebar) */}
       <Route element={<DashboardLayout />}>
