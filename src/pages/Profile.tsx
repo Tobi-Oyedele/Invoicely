@@ -19,6 +19,12 @@ const Profile = () => {
   const [accountNumber, setAccountNumber] = useState("");
   const [accountName, setAccountName] = useState("");
 
+  // International bank fields
+  const [accountType, setAccountType] = useState("");
+  const [routingNumber, setRoutingNumber] = useState("");
+  const [swiftCode, setSwiftCode] = useState("");
+  const [bankAddress, setBankAddress] = useState("");
+
   // Read-only metadata
   const [email, setEmail] = useState("");
   const [createdAt, setCreatedAt] = useState("");
@@ -84,6 +90,10 @@ const Profile = () => {
           setBankName(profile.bank_name || "");
           setAccountNumber(profile.account_number || "");
           setAccountName(profile.account_name || "");
+          setAccountType(profile.account_type || "");
+          setRoutingNumber(profile.routing_number || "");
+          setSwiftCode(profile.swift_code || "");
+          setBankAddress(profile.bank_address || "");
           setCreatedAt(profile.created_at || user.created_at || "");
         } else {
           // If profile row doesn't exist yet, we initialize registration date from auth user metadata
@@ -123,6 +133,10 @@ const Profile = () => {
         bank_name: bankName.trim() || null,
         account_number: accountNumber.trim() || null,
         account_name: accountName.trim() || null,
+        account_type: accountType || null,
+        routing_number: routingNumber.trim() || null,
+        swift_code: swiftCode.trim() || null,
+        bank_address: bankAddress.trim() || null,
       });
 
       if (upsertError) throw upsertError;
@@ -217,6 +231,14 @@ const Profile = () => {
             setAccountNumber={setAccountNumber}
             accountName={accountName}
             setAccountName={setAccountName}
+            accountType={accountType}
+            setAccountType={setAccountType}
+            routingNumber={routingNumber}
+            setRoutingNumber={setRoutingNumber}
+            swiftCode={swiftCode}
+            setSwiftCode={setSwiftCode}
+            bankAddress={bankAddress}
+            setBankAddress={setBankAddress}
             saving={saving}
           />
 
