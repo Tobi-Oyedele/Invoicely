@@ -5,7 +5,11 @@ import { supabase } from "../../lib/supabase";
 import { navItems } from "../../data/navigation";
 import { useTheme } from "../../hooks/useTheme";
 
-const Sidebar = () => {
+interface SidebarProps {
+  onClose?: () => void;
+}
+
+const Sidebar = ({ onClose }: SidebarProps) => {
   const navigate = useNavigate();
   const [loggingOut, setLoggingOut] = useState(false);
   const [theme, setTheme] = useTheme();
@@ -14,6 +18,7 @@ const Sidebar = () => {
     setLoggingOut(true);
     try {
       await supabase.auth.signOut();
+      if (onClose) onClose();
       navigate("/sign-in");
     } catch (err) {
       console.error("Error signing out:", err);
@@ -23,10 +28,14 @@ const Sidebar = () => {
   };
 
   return (
-    <div className="hidden md:flex md:flex-col md:fixed md:inset-y-0 md:left-0 md:w-64 bg-white dark:bg-zinc-950 border-r border-zinc-200 dark:border-zinc-800 transition-colors z-30">
+    <div className="flex flex-col h-full w-full bg-white dark:bg-zinc-950 transition-colors">
       {/* Brand Header */}
-      <div className="h-16 flex items-center px-6 dark:border-zinc-900">
-        <Link to="/dashboard" className="flex items-center gap-2.5 group">
+      <div className="h-16 flex items-center justify-between px-6 border-b border-zinc-100 dark:border-zinc-900">
+        <Link
+          to="/dashboard"
+          onClick={onClose}
+          className="flex items-center gap-2.5 group"
+        >
           <div className="w-8 h-8 rounded-lg bg-zinc-900 dark:bg-zinc-100 flex items-center justify-center text-white dark:text-zinc-950 transition-transform group-hover:scale-[1.02]">
             <svg
               className="w-4.5 h-4.5"
@@ -46,6 +55,30 @@ const Sidebar = () => {
             Invoicio
           </span>
         </Link>
+
+        {/* Mobile Close Button */}
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="md:hidden p-1.5 text-zinc-500 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900 rounded-lg transition-colors focus:outline-none cursor-pointer"
+            aria-label="Close sidebar"
+          >
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M6 18 18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* Navigation Links */}
@@ -55,6 +88,7 @@ const Sidebar = () => {
             <NavLink
               key={item.name}
               to={item.to}
+              onClick={onClose}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3.5 py-2.5 text-sm font-medium rounded-lg transition-colors ${
                   isActive
