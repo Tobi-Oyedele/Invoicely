@@ -121,7 +121,7 @@ const InvoicesPage = () => {
 
         const { data: profile, error: dbError } = await supabase
           .from("profiles")
-          .select("city, country, bank_name, account_number")
+          .select("bank_name, account_number")
           .eq("id", user.id)
           .maybeSingle();
 
@@ -129,10 +129,8 @@ const InvoicesPage = () => {
 
         const missing = [];
         if (!profile) {
-          missing.push("City", "Country", "Bank Name", "Account Number");
+          missing.push("Bank Name", "Account Number");
         } else {
-          if (!profile.city) missing.push("City");
-          if (!profile.country) missing.push("Country");
           if (!profile.bank_name) missing.push("Bank Name");
           if (!profile.account_number) missing.push("Account Number");
         }

@@ -26,6 +26,8 @@ interface Profile {
   business_name: string | null;
   city: string | null;
   country: string | null;
+  bank_name: string | null;
+  account_number: string | null;
 }
 
 const NewInvoicePage = () => {
@@ -40,7 +42,9 @@ const NewInvoicePage = () => {
 
   // Form state fields
   const [invoiceNumber, setInvoiceNumber] = useState("");
-  const [issueDate, setIssueDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [issueDate, setIssueDate] = useState(
+    () => new Date().toISOString().split("T")[0],
+  );
   const [dueDate, setDueDate] = useState("");
   const [selectedClientId, setSelectedClientId] = useState("");
   const [notes, setNotes] = useState("");
@@ -49,7 +53,9 @@ const NewInvoicePage = () => {
     { description: "", quantity: 1, rate: 0, currency: "NGN" },
   ]);
 
-  const suggestInvoiceNumber = (existingInvoices: { invoice_number: string }[]) => {
+  const suggestInvoiceNumber = (
+    existingInvoices: { invoice_number: string }[],
+  ) => {
     if (!existingInvoices || existingInvoices.length === 0) {
       return "INV-001";
     }
@@ -85,7 +91,9 @@ const NewInvoicePage = () => {
         // 1. Fetch user profile
         const { data: profileData, error: profileError } = await supabase
           .from("profiles")
-          .select("first_name, last_name, email, business_name, city, country")
+          .select(
+            "first_name, last_name, email, business_name, city, country, bank_name, account_number",
+          )
           .eq("id", user.id)
           .maybeSingle();
 
@@ -115,7 +123,8 @@ const NewInvoicePage = () => {
       } catch (err) {
         const error = err as Error;
         console.error("Error fetching compose data:", error);
-        if (active) setErrorMsg(error.message || "Failed to load compose references.");
+        if (active)
+          setErrorMsg(error.message || "Failed to load compose references.");
       } finally {
         if (active) setLoading(false);
       }
@@ -132,27 +141,36 @@ const NewInvoicePage = () => {
   }, []);
 
   // Line item manipulation handlers
-  const handleLineItemChange = (index: number, field: keyof LineItem, value: string | number) => {
+  const handleLineItemChange = (
+    index: number,
+    field: keyof LineItem,
+    value: string | number,
+  ) => {
     setLineItems((prev) =>
       prev.map((item, idx) => {
         if (idx !== index) return item;
         return {
           ...item,
-          [field]: field === "description" || field === "currency" ? String(value) : Number(value),
+          [field]:
+            field === "description" || field === "currency"
+              ? String(value)
+              : Number(value),
         };
-      })
+      }),
     );
   };
 
   const addLineItem = () => {
-    setLineItems((prev) => [...prev, { description: "", quantity: 1, rate: 0, currency: currency || "NGN" }]);
+    setLineItems((prev) => [
+      ...prev,
+      { description: "", quantity: 1, rate: 0, currency: currency || "NGN" },
+    ]);
   };
 
   const removeLineItem = (index: number) => {
     if (lineItems.length === 1) return; // Keep at least 1 item
     setLineItems((prev) => prev.filter((_, idx) => idx !== index));
   };
-
 
   // Submit invoice details
   const handleSubmit = async (e: React.FormEvent) => {
@@ -165,8 +183,15 @@ const NewInvoicePage = () => {
       setErrorMsg("Please enter an invoice number.");
       return;
     }
-    if (lineItems.some((item) => !item.description.trim() || item.rate < 0 || item.quantity <= 0)) {
-      setErrorMsg("Please ensure all line items have description, valid quantity, and rate.");
+    if (
+      lineItems.some(
+        (item) =>
+          !item.description.trim() || item.rate < 0 || item.quantity <= 0,
+      )
+    ) {
+      setErrorMsg(
+        "Please ensure all line items have description, valid quantity, and rate.",
+      );
       return;
     }
 
@@ -230,7 +255,10 @@ const NewInvoicePage = () => {
           .single();
 
         if (error) {
-          if (error.code === "23505" || (error.message && error.message.toLowerCase().includes("duplicate"))) {
+          if (
+            error.code === "23505" ||
+            (error.message && error.message.toLowerCase().includes("duplicate"))
+          ) {
             // Uniqueness collision in database (race condition)! Auto-increment and retry
             const match = currentInvoiceNumber.match(/(\d+)/);
             const num = match ? parseInt(match[0], 10) : 0;
@@ -250,7 +278,9 @@ const NewInvoicePage = () => {
 
       if (invoiceError) throw invoiceError;
       if (!savedSuccessfully || !invoiceResult) {
-        throw new Error("Failed to generate a unique invoice number after several attempts. Please try again.");
+        throw new Error(
+          "Failed to generate a unique invoice number after several attempts. Please try again.",
+        );
       }
 
       // 2. Insert dynamic line items tied to invoice ID
@@ -262,7 +292,9 @@ const NewInvoicePage = () => {
         currency: item.currency || currency || "NGN",
       }));
 
-      const { error: linesError } = await supabase.from("line_items").insert(itemsToInsert);
+      const { error: linesError } = await supabase
+        .from("line_items")
+        .insert(itemsToInsert);
 
       if (linesError) {
         // Safe compensating delete to prevent orphaned invoices
@@ -273,7 +305,7 @@ const NewInvoicePage = () => {
 
         if (rollbackError) {
           throw new Error(
-            `Failed to save line items (${linesError.message}) and failed to roll back orphaned invoice (${rollbackError.message}). Please contact support.`
+            `Failed to save line items (${linesError.message}) and failed to roll back orphaned invoice (${rollbackError.message}). Please contact support.`,
           );
         }
         throw linesError;
@@ -284,7 +316,9 @@ const NewInvoicePage = () => {
     } catch (err) {
       const error = err as Error;
       console.error("Error saving invoice:", error);
-      setErrorMsg(error.message || "An unexpected error occurred while saving invoice.");
+      setErrorMsg(
+        error.message || "An unexpected error occurred while saving invoice.",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -302,6 +336,59 @@ const NewInvoicePage = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="h-10 bg-zinc-100 dark:bg-zinc-950 rounded-lg"></div>
             <div className="h-10 bg-zinc-100 dark:bg-zinc-950 rounded-lg"></div>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  const isMissingBilling = !profile?.bank_name || !profile?.account_number;
+
+  if (isMissingBilling) {
+    return (
+      <main className="py-6 px-4 lg:py-10 lg:px-8 max-w-4xl mx-auto selection:bg-zinc-100 dark:selection:bg-zinc-800 transition-all">
+        {/* Back navigation */}
+        <div className="mb-6">
+          <Link
+            to="/invoices"
+            className="inline-flex items-center gap-2 text-xs font-semibold text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors"
+          >
+            <FiArrowLeft className="w-4 h-4" />
+            <span>Back to Invoices</span>
+          </Link>
+        </div>
+
+        <div className="mb-8">
+          <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
+            Create Invoice
+          </h1>
+          <p className="mt-1 lg:mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+            Draft a new invoice, specify line items, and select client billing
+            info.
+          </p>
+        </div>
+
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-8 text-center space-y-6 max-w-xl mx-auto shadow-xs mt-12 transition-all">
+          <div className="w-16 h-16 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-full flex items-center justify-center mx-auto">
+            <FiAlertCircle className="w-8 h-8" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-50">
+              Payment Setup Required
+            </h2>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed max-w-md mx-auto">
+              Before you can create invoices, you must update your payment
+              credentials. Having your bank details set up is required so your
+              clients know exactly how to pay you.
+            </p>
+          </div>
+          <div className="pt-2">
+            <Link
+              to="/profile"
+              className="inline-flex items-center justify-center gap-2 bg-zinc-900 hover:bg-zinc-800 active:bg-zinc-950 text-white dark:bg-zinc-100 dark:hover:bg-zinc-200 dark:active:bg-zinc-300 dark:text-zinc-950 rounded-xl px-6 py-3 font-semibold transition-all shadow-xs hover:shadow-md cursor-pointer active:scale-[0.98]"
+            >
+              <span>Set Up Payment Details</span>
+            </Link>
           </div>
         </div>
       </main>
@@ -326,7 +413,8 @@ const NewInvoicePage = () => {
           Create Invoice
         </h1>
         <p className="mt-1 lg:mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-          Draft a new invoice, specify line items, and select client billing info.
+          Draft a new invoice, specify line items, and select client billing
+          info.
         </p>
       </div>
 
@@ -355,7 +443,8 @@ const NewInvoicePage = () => {
                       "Your business"}
                   </h4>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                    {profile.email} • {profile.city || "No city set"}, {profile.country || "No country set"}
+                    {profile.email} • {profile.city || "No city set"},{" "}
+                    {profile.country || "No country set"}
                   </p>
                 </div>
                 <Link
@@ -366,7 +455,9 @@ const NewInvoicePage = () => {
                 </Link>
               </div>
             ) : (
-              <p className="text-xs text-zinc-400 dark:text-zinc-500 italic">No sender profile loaded.</p>
+              <p className="text-xs text-zinc-400 dark:text-zinc-500 italic">
+                No sender profile loaded.
+              </p>
             )}
           </div>
 
@@ -403,7 +494,8 @@ const NewInvoicePage = () => {
               ) : (
                 <div className="p-4 bg-amber-50/50 dark:bg-amber-950/15 border border-amber-200/50 dark:border-amber-900/30 rounded-xl flex items-start justify-between gap-3 flex-wrap">
                   <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed font-medium">
-                    No clients created yet. Please create a client in the directory first to draft invoices!
+                    No clients created yet. Please create a client in the
+                    directory first to draft invoices!
                   </p>
                   <Link
                     to="/clients"
