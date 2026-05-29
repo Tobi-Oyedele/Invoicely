@@ -35,6 +35,10 @@ const Profile = () => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
 
+  useEffect(() => {
+    document.title = "My Business Profile | Invoicely";
+  }, []);
+
   // Clear notifications after 5 seconds
   useEffect(() => {
     if (successMsg) {

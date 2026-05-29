@@ -86,6 +86,10 @@ const Clients = () => {
     };
   }, [fetchClients]);
 
+  useEffect(() => {
+    document.title = "Client Directory | Invoicely";
+  }, []);
+
   // Close dropdown menu on viewport scroll or resize to keep it positioned correctly
   useEffect(() => {
     if (activeMenuId) {

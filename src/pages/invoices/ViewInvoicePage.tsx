@@ -132,6 +132,14 @@ const ViewInvoicePage = ({ defaultEditing = false, idOverride }: ViewInvoicePage
   }, [fetchInvoiceDetails]);
 
   useEffect(() => {
+    if (invoice?.invoice_number) {
+      document.title = `${invoice.invoice_number} | Invoicely`;
+    } else {
+      document.title = "Invoice Details | Invoicely";
+    }
+  }, [invoice?.invoice_number]);
+
+  useEffect(() => {
     if (successMsg) {
       const timer = setTimeout(() => setSuccessMsg(null), 5000);
       return () => clearTimeout(timer);

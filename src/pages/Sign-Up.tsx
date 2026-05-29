@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import Logo from "../components/sign-up/Logo";
@@ -8,6 +8,10 @@ import { SignUpForm } from "../components/sign-up/SignUpForm";
 
 const SignUpPage = () => {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    document.title = "Get Started | Invoicely";
+  }, []);
 
   // Form Field States
   const [firstName, setFirstName] = useState("");

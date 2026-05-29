@@ -144,6 +144,10 @@ const InvoicesPage = () => {
     checkProfileStatus();
   }, []);
 
+  useEffect(() => {
+    document.title = "My Invoices | Invoicely";
+  }, []);
+
   // Close menus on scroll/resize
   useEffect(() => {
     if (activeMenuId || activeStatusSelectorId) {

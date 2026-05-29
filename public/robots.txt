@@ -1,0 +1,14 @@
+# https://www.robotstxt.org/robotstxt.html
+
+User-agent: *
+Allow: /
+
+# Exclude sensitive private dashboard pages from search crawlers
+Disallow: /dashboard
+Disallow: /invoices
+Disallow: /clients
+Disallow: /profile
+Disallow: /settings
+Disallow: /reset-password
+
+Sitemap: https://invoicely.online/sitemap.xml

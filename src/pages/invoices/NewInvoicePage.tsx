@@ -72,6 +72,10 @@ const NewInvoicePage = () => {
   };
 
   useEffect(() => {
+    document.title = "Create New Invoice | Invoicely";
+  }, []);
+
+  useEffect(() => {
     let active = true;
 
     const fetchComposeData = async () => {

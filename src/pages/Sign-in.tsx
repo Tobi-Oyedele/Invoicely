@@ -1,10 +1,14 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { FiEye, FiEyeOff, FiLoader, FiAlertCircle, FiCheckCircle } from "react-icons/fi";
 
 const SignInPage = () => {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    document.title = "Sign In | Invoicely";
+  }, []);
 
   // Form Field States
   const [email, setEmail] = useState("");
