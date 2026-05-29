@@ -34,7 +34,7 @@ export const MobileMenu = ({ isOpen, onClose }: MobileMenuProps) => {
               </svg>
             </div>
             <span className="font-bold tracking-tight text-xl text-zinc-900 dark:text-zinc-50">
-              Invoicio
+              Invoicely
             </span>
           </Link>
           <button
@@ -94,7 +94,7 @@ export const MobileMenu = ({ isOpen, onClose }: MobileMenuProps) => {
           Get Started for Free
         </Link>
         <p className="text-center text-xs text-zinc-400 dark:text-zinc-500">
-          &copy; 2026 Invoicio. All rights reserved.
+          &copy; 2026 Invoicely. All rights reserved.
         </p>
       </div>
     </div>

@@ -76,7 +76,7 @@ const ResetPassword = () => {
             </svg>
           </div>
           <span className="font-bold tracking-tight text-xl text-zinc-900 dark:text-zinc-50">
-            Invoicio
+            Invoicely
           </span>
         </Link>
 

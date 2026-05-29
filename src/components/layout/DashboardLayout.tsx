@@ -80,7 +80,7 @@ const DashboardLayout = () => {
             </svg>
           </button>
           <span className="font-bold tracking-tight text-lg text-zinc-900 dark:text-zinc-50">
-            Invoicio
+            Invoicely
           </span>
         </div>
       </header>

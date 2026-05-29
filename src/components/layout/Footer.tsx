@@ -21,11 +21,11 @@ const Footer = () => {
             </svg>
           </div>
           <span className="font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-            Invoicio
+            Invoicely
           </span>
         </div>
         <p className="text-xs text-zinc-500 dark:text-zinc-100 md:order-last">
-          &copy; 2026 Invoicio. All rights reserved.
+          &copy; 2026 Invoicely. All rights reserved.
         </p>
         <div className="flex gap-6 text-sm text-zinc-500 dark:text-zinc-450">
           <Link
