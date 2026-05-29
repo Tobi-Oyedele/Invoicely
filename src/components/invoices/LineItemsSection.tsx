@@ -64,7 +64,7 @@ export const LineItemsSection = ({
               className="flex flex-col md:flex-row gap-4 p-4 md:p-0 bg-zinc-50/50 dark:bg-zinc-950/20 md:bg-transparent rounded-xl border border-zinc-100 dark:border-zinc-900 md:border-none relative"
             >
               {/* Description column */}
-              <div className="flex-1">
+              <div className="flex-1 pr-10 md:pr-0">
                 <label className="block md:hidden text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
                   Description
                 </label>
@@ -80,9 +80,9 @@ export const LineItemsSection = ({
               </div>
 
               {/* Grid wrap Qty, Rate and Amount for mobile compatibility */}
-              <div className="grid grid-cols-3 md:flex gap-4 md:items-center">
+              <div className="grid grid-cols-12 md:flex gap-4 md:items-center">
                 {/* Quantity column */}
-                <div className="md:w-24">
+                <div className="col-span-4 md:w-24">
                   <label className="block md:hidden text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
                     Qty
                   </label>
@@ -98,7 +98,7 @@ export const LineItemsSection = ({
                 </div>
 
                 {/* Rate column with integrated currency selector */}
-                <div className="md:w-48">
+                <div className="col-span-8 md:w-48">
                   <label className="block md:hidden text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
                     Rate
                   </label>
@@ -123,17 +123,17 @@ export const LineItemsSection = ({
                       value={item.rate || ""}
                       placeholder="0.00"
                       onChange={(e) => onLineItemChange(index, "rate", e.target.value)}
-                      className="block w-full border-none outline-hidden focus:ring-0 text-sm text-right bg-transparent text-zinc-900 dark:text-zinc-50 py-2.5"
+                      className="block w-full border-none outline-hidden focus:ring-0 text-sm text-right bg-transparent text-zinc-900 dark:text-zinc-50 py-2.5 min-w-0"
                     />
                   </div>
                 </div>
 
-                {/* Amount text column */}
-                <div className="md:w-36 flex flex-col justify-center items-end select-none">
-                  <label className="block md:hidden text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
+                {/* Amount text column - wraps to new line on mobile with a clean border, aligned left-to-right */}
+                <div className="col-span-12 md:w-36 flex flex-row md:flex-col justify-between md:justify-center items-center md:items-end select-none border-t border-zinc-100 dark:border-zinc-800/60 pt-2.5 md:pt-0 mt-1 md:mt-0">
+                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider md:hidden">
                     Amount
-                  </label>
-                  <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 py-2.5 truncate">
+                  </span>
+                  <span className="text-sm font-bold md:font-semibold text-zinc-900 dark:text-zinc-50 py-0.5 md:py-2.5 truncate">
                     {formatCurrency((item.quantity || 0) * (item.rate || 0), itemCurrency)}
                   </span>
                 </div>

@@ -10,7 +10,6 @@ import {
   FiFileText,
   FiBriefcase,
 } from "react-icons/fi";
-
 import { LineItemsSection } from "../../components/invoices/LineItemsSection";
 import type { LineItem } from "../../components/invoices/InvoicePDFDocument";
 
