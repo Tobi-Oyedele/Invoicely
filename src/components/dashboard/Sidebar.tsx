@@ -17,9 +17,13 @@ const Sidebar = ({ onClose }: SidebarProps) => {
   const handleLogout = async () => {
     setLoggingOut(true);
     try {
+      // 1. Navigate to the public landing page first.
+      // This unmounts the protected DashboardLayout, preventing its AuthGuard from intercepting the null session and redirecting the user to /sign-in.
+      navigate("/");
+      
+      // 2. Perform the sign-out routine in the background
       await supabase.auth.signOut();
       if (onClose) onClose();
-      navigate("/sign-in");
     } catch (err) {
       console.error("Error signing out:", err);
     } finally {
