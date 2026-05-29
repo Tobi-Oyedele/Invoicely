@@ -21,7 +21,7 @@ export const InvoicePaymentInstructions = ({
 
   return (
     <div className="pt-6 border-t border-zinc-100 dark:border-zinc-800 select-none">
-      <h3 className="text-xs font-bold text-zinc-400 dark:text-zinc-55 uppercase tracking-widest mb-3">
+      <h3 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-3">
         Payment Instructions
       </h3>
       <div className="p-4 bg-zinc-50/50 dark:bg-zinc-950/20 border border-zinc-100 dark:border-zinc-900/60 rounded-xl max-w-lg text-xs space-y-1.5 text-zinc-700 dark:text-zinc-350">

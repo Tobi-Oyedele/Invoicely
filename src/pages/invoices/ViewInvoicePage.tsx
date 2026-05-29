@@ -616,7 +616,7 @@ const ViewInvoicePage = ({ defaultEditing = false, idOverride }: ViewInvoicePage
               <h4 className="font-bold text-base text-zinc-900 dark:text-zinc-100">
                 {sender.business_name || `${sender.first_name || ""} ${sender.last_name || ""}`.trim() || "Your Business"}
               </h4>
-              <div className="text-xs text-zinc-550 dark:text-zinc-400 space-y-1.5 mt-2 font-medium">
+              <div className="text-xs text-zinc-500 dark:text-zinc-400 space-y-1.5 mt-2 font-medium">
                 <div className="flex items-center gap-2">
                   <FiMail className="w-3.5 h-3.5 opacity-60" />
                   <span>{sender.email}</span>
@@ -641,7 +641,7 @@ const ViewInvoicePage = ({ defaultEditing = false, idOverride }: ViewInvoicePage
                   <h4 className="font-bold text-base text-zinc-900 dark:text-zinc-100">
                     {invoice.clients.client_name}
                   </h4>
-                  <div className="text-xs text-zinc-550 dark:text-zinc-400 space-y-1.5 mt-2 font-medium">
+                  <div className="text-xs text-zinc-500 dark:text-zinc-400 space-y-1.5 mt-2 font-medium">
                     {invoice.clients.email && (
                       <div className="flex items-center gap-2">
                         <FiMail className="w-3.5 h-3.5 opacity-60" />
@@ -729,7 +729,7 @@ const ViewInvoicePage = ({ defaultEditing = false, idOverride }: ViewInvoicePage
                     <span className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">
                       {item.description}
                     </span>
-                    <div className="flex justify-between items-center text-xs text-zinc-550 dark:text-zinc-450">
+                    <div className="flex justify-between items-center text-xs text-zinc-500 dark:text-zinc-400">
                       <span className="select-none">
                         {item.quantity} × {formatCurrency(item.rate, itemCurrency)}
                       </span>
@@ -757,7 +757,7 @@ const ViewInvoicePage = ({ defaultEditing = false, idOverride }: ViewInvoicePage
                   <div className="w-full sm:w-80 space-y-4 text-sm select-none">
                     {Object.entries(groups).map(([currencyCode, sum]) => (
                       <div key={currencyCode} className="space-y-1.5 pb-2 border-b border-zinc-50 dark:border-zinc-850/50 last:border-b-0">
-                        <div className="flex justify-between items-center text-zinc-550 dark:text-zinc-400">
+                        <div className="flex justify-between items-center text-zinc-500 dark:text-zinc-400">
                           <span>Subtotal ({currencyCode}):</span>
                           <span className="font-medium text-zinc-900 dark:text-zinc-200">
                             {formatCurrency(sum, currencyCode)}
@@ -783,7 +783,7 @@ const ViewInvoicePage = ({ defaultEditing = false, idOverride }: ViewInvoicePage
           {/* Section 5: Notes */}
           {invoice.notes && (
             <div className="pt-6 border-t border-zinc-100 dark:border-zinc-800">
-              <h3 className="text-xs font-bold text-zinc-400 dark:text-zinc-55 uppercase tracking-widest mb-2 select-none">
+              <h3 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-2 select-none">
                 Notes & Terms
               </h3>
               <p className="text-xs md:text-sm text-zinc-650 dark:text-zinc-400 leading-relaxed whitespace-pre-line">

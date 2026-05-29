@@ -41,7 +41,7 @@ export const LineItemsSection = ({
 
   return (
     <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xs p-6 lg:p-8 space-y-6">
-      <h3 className="text-xs font-bold text-zinc-400 dark:text-zinc-55 uppercase tracking-widest mb-4 border-b border-zinc-100 dark:border-zinc-800 pb-2">
+      <h3 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-4 border-b border-zinc-100 dark:border-zinc-800 pb-2">
         Line Items Details
       </h3>
 
@@ -133,7 +133,7 @@ export const LineItemsSection = ({
                   <label className="block md:hidden text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
                     Amount
                   </label>
-                  <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-55 py-2.5 truncate">
+                  <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 py-2.5 truncate">
                     {formatCurrency((item.quantity || 0) * (item.rate || 0), itemCurrency)}
                   </span>
                 </div>
@@ -170,12 +170,12 @@ export const LineItemsSection = ({
 
         {/* Rolling subtotal display */}
         <div className="flex flex-col items-end gap-1.5 border-t sm:border-t-0 border-zinc-100 dark:border-zinc-850 pt-4 sm:pt-0 text-right">
-          <span className="text-xs font-bold text-zinc-400 dark:text-zinc-55 uppercase tracking-wider select-none">
+          <span className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider select-none">
             Invoice Total:
           </span>
           <div className="space-y-1">
             {Object.entries(groupedTotals).map(([currencyCode, sum]) => (
-              <div key={currencyCode} className="text-xl md:text-2xl font-extrabold text-zinc-900 dark:text-zinc-55 tracking-tight">
+              <div key={currencyCode} className="text-xl md:text-2xl font-extrabold text-zinc-900 dark:text-zinc-50 tracking-tight">
                 {formatCurrency(sum, currencyCode)}
               </div>
             ))}
