@@ -32,7 +32,7 @@ const Sidebar = ({ onClose }: SidebarProps) => {
       {/* Brand Header */}
       <div className="h-16 flex items-center justify-between px-6 border-b border-zinc-100 dark:border-zinc-900">
         <Link
-          to="/dashboard"
+          to="/invoices"
           onClick={onClose}
           className="flex items-center gap-2.5 group"
         >

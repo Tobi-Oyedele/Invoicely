@@ -36,8 +36,8 @@ const SignInPage = () => {
         throw signInError;
       }
 
-      // Redirect to /dashboard
-      navigate("/dashboard");
+      // Redirect to /invoices
+      navigate("/invoices");
     } catch (err) {
       const error = err as Error;
       setError(error.message || "An unexpected error occurred during sign in.");
