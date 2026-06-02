@@ -239,9 +239,6 @@ export const InvoicePDFDocument = ({ invoice, sender }: InvoicePDFDocumentProps)
               <Text style={pdfStyles.metaText}>{`${sender.first_name || ""} ${sender.last_name || ""}`.trim()}</Text>
             )}
           </View>
-          <View style={pdfStyles.invoiceMeta}>
-            <Text style={pdfStyles.invoiceNum}>{invoice.invoice_number}</Text>
-          </View>
         </View>
 
         {/* Sender & Client billing parties info */}
