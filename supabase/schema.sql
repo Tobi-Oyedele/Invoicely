@@ -76,7 +76,6 @@ create table public.line_items (
   description text not null,
   quantity integer not null,
   rate numeric not null,
-  currency text default 'NGN',
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 

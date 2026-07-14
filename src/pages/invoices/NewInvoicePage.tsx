@@ -12,6 +12,7 @@ import {
 } from "react-icons/fi";
 import { LineItemsSection } from "../../components/invoices/LineItemsSection";
 import type { LineItem } from "../../components/invoices/InvoicePDFDocument";
+import { CURRENCIES, DEFAULT_CURRENCY } from "../../lib/currency";
 
 interface Client {
   id: string;
@@ -47,9 +48,9 @@ const NewInvoicePage = () => {
   const [dueDate, setDueDate] = useState("");
   const [selectedClientId, setSelectedClientId] = useState("");
   const [notes, setNotes] = useState("");
-  const currency = "NGN";
+  const [currency, setCurrency] = useState(DEFAULT_CURRENCY);
   const [lineItems, setLineItems] = useState<LineItem[]>([
-    { description: "", quantity: 1, rate: 0, currency: "NGN" },
+    { description: "", quantity: 1, rate: 0 },
   ]);
 
   const suggestInvoiceNumber = (
@@ -154,10 +155,7 @@ const NewInvoicePage = () => {
         if (idx !== index) return item;
         return {
           ...item,
-          [field]:
-            field === "description" || field === "currency"
-              ? String(value)
-              : Number(value),
+          [field]: field === "description" ? String(value) : Number(value),
         };
       }),
     );
@@ -166,7 +164,7 @@ const NewInvoicePage = () => {
   const addLineItem = () => {
     setLineItems((prev) => [
       ...prev,
-      { description: "", quantity: 1, rate: 0, currency: currency || "NGN" },
+      { description: "", quantity: 1, rate: 0 },
     ]);
   };
 
@@ -252,7 +250,7 @@ const NewInvoicePage = () => {
             due_date: dueDate || null,
             notes: notes.trim() || null,
             status: "draft", // Defaults to draft
-            currency: lineItems[0]?.currency || "NGN",
+            currency,
           })
           .select()
           .single();
@@ -292,7 +290,6 @@ const NewInvoicePage = () => {
         description: item.description.trim(),
         quantity: item.quantity,
         rate: item.rate,
-        currency: item.currency || currency || "NGN",
       }));
 
       const { error: linesError } = await supabase
@@ -519,7 +516,7 @@ const NewInvoicePage = () => {
             <span>Invoice Specifications</span>
           </h3>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
             <div>
               <label
                 htmlFor="invoice_number"
@@ -535,6 +532,29 @@ const NewInvoicePage = () => {
                 value={invoiceNumber}
                 className="block w-full px-3.5 py-2.5 text-sm bg-zinc-105 dark:bg-zinc-950/60 text-zinc-500 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 rounded-xl font-semibold cursor-not-allowed select-none"
               />
+            </div>
+
+            <div>
+              <label
+                htmlFor="currency_select"
+                className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider mb-1.5"
+              >
+                Currency <span className="text-red-500">*</span>
+              </label>
+              <select
+                id="currency_select"
+                required
+                disabled={submitting}
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value)}
+                className="block w-full px-3.5 py-2.5 text-sm bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-600 focus:ring-1 focus:ring-zinc-400 dark:focus:ring-zinc-600 transition-all disabled:opacity-50"
+              >
+                {CURRENCIES.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.symbol} {c.code}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>
