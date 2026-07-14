@@ -9,7 +9,6 @@ import EditInvoicePage from "./pages/invoices/EditInvoicePage";
 import SignInPage from "./pages/Sign-in";
 import SignUpPage from "./pages/Sign-Up";
 import ResetPassword from "./pages/ResetPassword";
-import Settings from "./pages/Settings";
 import DashboardLayout from "./components/layout/DashboardLayout";
 
 const App = () => {
@@ -22,10 +21,12 @@ const App = () => {
 
       {/* Authenticated Dashboard Routes (Shared Sidebar) */}
       <Route element={<DashboardLayout />}>
-        <Route path="/dashboard" element={<Navigate to="/invoices" replace />} />
+        <Route
+          path="/dashboard"
+          element={<Navigate to="/invoices" replace />}
+        />
         <Route path="/clients" element={<Clients />} />
         <Route path="/profile" element={<Profile />} />
-        <Route path="/settings" element={<Settings />} />
         <Route path="/invoices" element={<InvoicesPage />} />
         <Route path="/invoices/new" element={<NewInvoicePage />} />
         <Route path="/invoices/:id" element={<ViewInvoicePage />} />
