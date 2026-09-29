@@ -1,62 +1,45 @@
+import { Link } from "react-router-dom";
+import { FiArrowRight } from "react-icons/fi";
+
+const steps = [
+  {
+    title: "Enter details",
+    body: "Your business, your client, and where to pay you.",
+  },
+  {
+    title: "Add items",
+    body: "Description, quantity and rate. Totals are calculated as you type.",
+  },
+  {
+    title: "Download PDF",
+    body: "Check the layout, then download a file ready to send.",
+  },
+];
+
 const HowItWorks = () => {
   return (
-    <section
-      id="how-it-works"
-      className="py-20 md:py-28 border-t border-zinc-100 dark:border-zinc-900 transition-colors"
-    >
-      <div className="max-w-7xl mx-auto px-6">
-        <div className="text-center max-w-3xl mx-auto mb-16">
-          <h2 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 md:text-4xl">
-            How It Works
-          </h2>
-          <p className="mt-4 text-zinc-500 dark:text-zinc-400">
-            Get from blank page to finished invoice in less than a minute.
-          </p>
-        </div>
+    <section id="how-it-works" className="border-t border-line py-20 md:py-28">
+      <div className="max-w-6xl mx-auto px-6">
+        <h2 className="text-2xl md:text-3xl font-semibold tracking-[-0.03em] text-fg max-w-md">
+          Blank page to sent invoice in under a minute
+        </h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto relative">
-          {/* Step 1 */}
-          <div className="flex flex-col items-start">
-            <div className="text-4xl font-extrabold text-zinc-900 dark:text-zinc-50 mb-4 select-none">
-              01
-            </div>
-            <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-50 mb-2">
-              Enter Details
-            </h3>
-            <p className="text-zinc-500 dark:text-zinc-400 leading-relaxed text-sm">
-              Enter your business details, client information, and payment
-              details.
-            </p>
-          </div>
+        <ol className="mt-12 grid md:grid-cols-3 gap-x-10 gap-y-8">
+          {steps.map((s) => (
+            <li key={s.title} className="border-t border-fg pt-4">
+              <h3 className="font-medium text-fg">{s.title}</h3>
+              <p className="mt-1.5 text-sm text-fg-muted leading-relaxed">{s.body}</p>
+            </li>
+          ))}
+        </ol>
 
-          {/* Step 2 */}
-          <div className="flex flex-col items-start">
-            <div className="text-4xl font-extrabold text-zinc-900 dark:text-zinc-50  mb-4 select-none">
-              02
-            </div>
-            <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-50 mb-2">
-              Add Items
-            </h3>
-            <p className="text-zinc-500 dark:text-zinc-400 leading-relaxed text-sm">
-              Add line items with descriptions, quantities, and rates. The
-              system does all the math instantly.
-            </p>
-          </div>
-
-          {/* Step 3 */}
-          <div className="flex flex-col items-start">
-            <div className="text-4xl font-extrabold text-zinc-900 dark:text-zinc-50 mb-4 select-none">
-              03
-            </div>
-            <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-50 mb-2">
-              Download PDF
-            </h3>
-            <p className="text-zinc-500 dark:text-zinc-400 leading-relaxed text-sm">
-              Preview your completed layout and download a polished PDF invoice
-              to send directly to your client.
-            </p>
-          </div>
-        </div>
+        <Link
+          to="/sign-up"
+          className="group mt-12 inline-flex items-center gap-2 text-sm font-medium text-fg hover:text-fg-muted transition-colors"
+        >
+          Start with a free account
+          <FiArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+        </Link>
       </div>
     </section>
   );

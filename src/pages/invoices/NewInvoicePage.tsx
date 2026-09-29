@@ -1,18 +1,20 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import {
   FiArrowLeft,
+  FiArrowRight,
   FiLoader,
   FiAlertCircle,
-  FiUser,
-  FiCalendar,
-  FiFileText,
-  FiBriefcase,
+  FiRefreshCw,
 } from "react-icons/fi";
 import { LineItemsSection } from "../../components/invoices/LineItemsSection";
 import type { LineItem } from "../../components/invoices/InvoicePDFDocument";
 import { CURRENCIES, DEFAULT_CURRENCY } from "../../lib/currency";
+import { bumpInvoiceNumber, nextInvoiceNumber } from "../../lib/invoiceNumber";
+import { AuthField } from "../../components/auth/AuthField";
+import { FormSection, Optional } from "../../components/ui/FormSection";
+import { SelectField } from "../../components/ui/SelectField";
 
 interface Client {
   id: string;
@@ -28,20 +30,26 @@ interface Profile {
   country: string | null;
   bank_name: string | null;
   account_number: string | null;
+  default_currency: string | null;
 }
 
 const NewInvoicePage = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [clientError, setClientError] = useState<string | null>(null);
+  const [dueDateError, setDueDateError] = useState<string | null>(null);
+  const [showItemErrors, setShowItemErrors] = useState(false);
 
   // Loaded database references
   const [clients, setClients] = useState<Client[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
 
   // Form state fields
-  const [invoiceNumber, setInvoiceNumber] = useState("");
+  // Every reference this user has issued; the next one is derived per client
+  const [existingNumbers, setExistingNumbers] = useState<string[]>([]);
   const [issueDate, setIssueDate] = useState(
     () => new Date().toISOString().split("T")[0],
   );
@@ -53,96 +61,86 @@ const NewInvoicePage = () => {
     { description: "", quantity: 1, rate: 0 },
   ]);
 
-  const suggestInvoiceNumber = (
-    existingInvoices: { invoice_number: string }[],
-  ) => {
-    if (!existingInvoices || existingInvoices.length === 0) {
-      return "INV-001";
-    }
-    const numbers = existingInvoices
-      .map((inv) => {
-        const match = inv.invoice_number.match(/(\d+)/);
-        return match ? parseInt(match[0], 10) : 0;
-      })
-      .filter((num) => !isNaN(num));
-
-    const max = numbers.length > 0 ? Math.max(...numbers) : 0;
-    const next = max + 1;
-    return `INV-${String(next).padStart(3, "0")}`;
-  };
-
   useEffect(() => {
-    document.title = "Create New Invoice | Invoicely";
+    document.title = "New Invoice | Invoicely";
+  }, []);
+
+  const fetchComposeData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setLoadError(null);
+
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
+
+      if (authError || !user) {
+        throw new Error("Your session has expired. Sign in again to create an invoice.");
+      }
+
+      // 1. Fetch user profile
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select(
+          "first_name, last_name, email, business_name, city, country, bank_name, account_number, default_currency",
+        )
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (profileError) throw profileError;
+      setProfile(profileData);
+      // Invoices are issued in the currency set on the profile
+      setCurrency(profileData?.default_currency || DEFAULT_CURRENCY);
+
+      // 2. Fetch user's clients
+      const { data: clientsData, error: clientsError } = await supabase
+        .from("clients")
+        .select("id, client_name")
+        .eq("user_id", user.id)
+        .order("client_name", { ascending: true });
+
+      if (clientsError) throw clientsError;
+      setClients(clientsData || []);
+
+      // 3. Query existing invoices to suggest next number
+      const { data: invoicesData, error: invoicesError } = await supabase
+        .from("invoices")
+        .select("invoice_number")
+        .eq("user_id", user.id);
+
+      if (invoicesError) throw invoicesError;
+
+      setExistingNumbers(
+        (invoicesData || []).map((inv) => inv.invoice_number).filter(Boolean),
+      );
+    } catch (err) {
+      const error = err as Error;
+      console.error("Error fetching compose data:", error);
+      // A failed load must not fall through to the "add payment details" gate
+      setLoadError(error.message || "We couldn't load what this invoice needs.");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
     let active = true;
-
-    const fetchComposeData = async () => {
-      try {
-        setLoading(true);
-        setErrorMsg(null);
-
-        const {
-          data: { user },
-          error: authError,
-        } = await supabase.auth.getUser();
-
-        if (authError || !user) {
-          throw new Error("Failed to retrieve active session.");
-        }
-
-        // 1. Fetch user profile
-        const { data: profileData, error: profileError } = await supabase
-          .from("profiles")
-          .select(
-            "first_name, last_name, email, business_name, city, country, bank_name, account_number",
-          )
-          .eq("id", user.id)
-          .maybeSingle();
-
-        if (profileError) throw profileError;
-        if (active) setProfile(profileData);
-
-        // 2. Fetch user's clients
-        const { data: clientsData, error: clientsError } = await supabase
-          .from("clients")
-          .select("id, client_name")
-          .eq("user_id", user.id)
-          .order("client_name", { ascending: true });
-
-        if (clientsError) throw clientsError;
-        if (active) setClients(clientsData || []);
-
-        // 3. Query existing invoices to suggest next number
-        const { data: invoicesData, error: invoicesError } = await supabase
-          .from("invoices")
-          .select("invoice_number")
-          .eq("user_id", user.id);
-
-        if (invoicesError) throw invoicesError;
-
-        const suggestedNumber = suggestInvoiceNumber(invoicesData || []);
-        if (active) setInvoiceNumber(suggestedNumber);
-      } catch (err) {
-        const error = err as Error;
-        console.error("Error fetching compose data:", error);
-        if (active)
-          setErrorMsg(error.message || "Failed to load compose references.");
-      } finally {
-        if (active) setLoading(false);
-      }
-    };
-
     const timer = setTimeout(() => {
-      fetchComposeData();
+      if (active) fetchComposeData();
     }, 0);
-
     return () => {
       active = false;
       clearTimeout(timer);
     };
-  }, []);
+  }, [fetchComposeData]);
+
+  // Reference for this invoice: per client, so it never reveals the overall count
+  const selectedClientName = clients.find((c) => c.id === selectedClientId)?.client_name;
+  const invoiceNumber = useMemo(
+    () => (selectedClientName ? nextInvoiceNumber(selectedClientName, existingNumbers) : ""),
+    [selectedClientName, existingNumbers],
+  );
 
   // Line item manipulation handlers
   const handleLineItemChange = (
@@ -176,22 +174,22 @@ const NewInvoicePage = () => {
   // Submit invoice details
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedClientId) {
-      setErrorMsg("Please select a client for this invoice.");
-      return;
-    }
-    if (!invoiceNumber.trim()) {
-      setErrorMsg("Please enter an invoice number.");
-      return;
-    }
-    if (
-      lineItems.some(
-        (item) =>
-          !item.description.trim() || item.rate < 0 || item.quantity <= 0,
-      )
-    ) {
+    setErrorMsg(null);
+
+    const itemsInvalid = lineItems.some(
+      (item) => !item.description.trim() || !(item.quantity > 0) || item.rate < 0,
+    );
+    const dueBeforeIssue = Boolean(dueDate && issueDate && dueDate < issueDate);
+
+    setClientError(selectedClientId ? null : "Choose who this invoice is for.");
+    setDueDateError(dueBeforeIssue ? "The due date can't be before the issue date." : null);
+    setShowItemErrors(itemsInvalid);
+
+    if (!selectedClientId || dueBeforeIssue || itemsInvalid) {
       setErrorMsg(
-        "Please ensure all line items have description, valid quantity, and rate.",
+        itemsInvalid
+          ? "Every line item needs a description and a quantity above zero."
+          : "Fix the highlighted fields to save this invoice.",
       );
       return;
     }
@@ -204,7 +202,7 @@ const NewInvoicePage = () => {
         data: { user },
       } = await supabase.auth.getUser();
 
-      if (!user) throw new Error("No active session found.");
+      if (!user) throw new Error("Your session has expired. Sign in again to save this invoice.");
 
       // 1. Insert into invoices table with auto-increment retry on unique violations
       let currentInvoiceNumber = invoiceNumber.trim();
@@ -232,11 +230,7 @@ const NewInvoicePage = () => {
 
         if (duplicateCheck) {
           // Collision found! Auto-increment the invoice number and retry
-          const match = currentInvoiceNumber.match(/(\d+)/);
-          const num = match ? parseInt(match[0], 10) : 0;
-          const nextNum = num + 1;
-          currentInvoiceNumber = `INV-${String(nextNum).padStart(3, "0")}`;
-          setInvoiceNumber(currentInvoiceNumber); // Update state to keep UI in sync
+          currentInvoiceNumber = bumpInvoiceNumber(currentInvoiceNumber);
           continue;
         }
 
@@ -261,11 +255,7 @@ const NewInvoicePage = () => {
             (error.message && error.message.toLowerCase().includes("duplicate"))
           ) {
             // Uniqueness collision in database (race condition)! Auto-increment and retry
-            const match = currentInvoiceNumber.match(/(\d+)/);
-            const num = match ? parseInt(match[0], 10) : 0;
-            const nextNum = num + 1;
-            currentInvoiceNumber = `INV-${String(nextNum).padStart(3, "0")}`;
-            setInvoiceNumber(currentInvoiceNumber); // Update state to keep UI in sync
+            currentInvoiceNumber = bumpInvoiceNumber(currentInvoiceNumber);
             continue;
           } else {
             invoiceError = error;
@@ -317,26 +307,67 @@ const NewInvoicePage = () => {
       const error = err as Error;
       console.error("Error saving invoice:", error);
       setErrorMsg(
-        error.message || "An unexpected error occurred while saving invoice.",
+        error.message || "The invoice wasn't saved. Try again.",
       );
     } finally {
       setSubmitting(false);
     }
   };
 
+  const backLink = (
+    <Link
+      to="/invoices"
+      className="mb-6 inline-flex items-center gap-1.5 text-sm text-fg-muted transition-colors hover:text-fg"
+    >
+      <FiArrowLeft className="size-4" />
+      Invoices
+    </Link>
+  );
+
+  const header = (
+    <div className="mb-8">
+      <h1 className="text-2xl lg:text-3xl font-semibold tracking-[-0.03em] text-fg">
+        New invoice
+      </h1>
+    </div>
+  );
+
   if (loading) {
     return (
-      <main className="py-6 px-4 lg:py-10 lg:px-8 max-w-4xl mx-auto animate-pulse">
-        <div className="mb-8">
-          <div className="h-4 w-24 bg-zinc-200 dark:bg-zinc-800 rounded-md"></div>
-          <div className="h-8 w-48 bg-zinc-200 dark:bg-zinc-800 rounded-md mt-4"></div>
+      <main aria-busy="true" className="py-6 px-4 lg:py-10 lg:px-8 max-w-4xl mx-auto">
+        {backLink}
+        {header}
+        <div className="space-y-8 motion-safe:animate-pulse">
+          {[1, 2, 3].map((i) => (
+            <div key={i}>
+              <div className="mb-5 h-4 w-28 rounded bg-line" />
+              <div className="grid gap-5 sm:grid-cols-2">
+                <div className="h-10 rounded-md bg-line" />
+                <div className="h-10 rounded-md bg-line" />
+              </div>
+            </div>
+          ))}
         </div>
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 lg:p-8 space-y-6">
-          <div className="h-32 bg-zinc-50 dark:bg-zinc-950 rounded-xl"></div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="h-10 bg-zinc-100 dark:bg-zinc-950 rounded-lg"></div>
-            <div className="h-10 bg-zinc-100 dark:bg-zinc-950 rounded-lg"></div>
-          </div>
+      </main>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <main className="py-6 px-4 lg:py-10 lg:px-8 max-w-4xl mx-auto">
+        {backLink}
+        {header}
+        <div className="max-w-md border-t border-fg pt-5">
+          <h2 className="font-medium text-fg">We couldn't start a new invoice</h2>
+          <p className="mt-1.5 text-sm text-fg-muted leading-relaxed">{loadError}</p>
+          <button
+            type="button"
+            onClick={fetchComposeData}
+            className="mt-5 inline-flex items-center gap-2 rounded-md border border-line-strong px-3.5 py-2 text-sm font-medium text-fg hover:border-fg-subtle hover:bg-surface transition-colors cursor-pointer"
+          >
+            <FiRefreshCw className="size-3.5" />
+            Try again
+          </button>
         </div>
       </main>
     );
@@ -346,310 +377,192 @@ const NewInvoicePage = () => {
 
   if (isMissingBilling) {
     return (
-      <main className="py-6 px-4 lg:py-10 lg:px-8 max-w-4xl mx-auto selection:bg-zinc-100 dark:selection:bg-zinc-800 transition-all">
-        {/* Back navigation */}
-        <div className="mb-6">
-          <Link
-            to="/invoices"
-            className="inline-flex items-center gap-2 text-xs font-semibold text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors"
-          >
-            <FiArrowLeft className="w-4 h-4" />
-            <span>Back to Invoices</span>
-          </Link>
-        </div>
-
-        <div className="mb-8">
-          <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
-            Create Invoice
-          </h1>
-          <p className="mt-1 lg:mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-            Draft a new invoice, specify line items, and select client billing
-            info.
+      <main className="py-6 px-4 lg:py-10 lg:px-8 max-w-4xl mx-auto">
+        {backLink}
+        {header}
+        <div className="max-w-md border-t border-fg pt-5">
+          <h2 className="font-medium text-fg">Add your payment details first</h2>
+          <p className="mt-1.5 text-sm text-fg-muted leading-relaxed">
+            Every invoice tells your client where to pay you, so your bank name
+            and account number need to be in your profile before you create one.
           </p>
-        </div>
-
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-8 text-center space-y-6 max-w-xl mx-auto shadow-xs mt-12 transition-all">
-          <div className="w-16 h-16 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-full flex items-center justify-center mx-auto">
-            <FiAlertCircle className="w-8 h-8" />
-          </div>
-          <div className="space-y-2">
-            <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-50">
-              Payment Setup Required
-            </h2>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed max-w-md mx-auto">
-              Before you can create invoices, you must update your payment
-              credentials. Having your bank details set up is required so your
-              clients know exactly how to pay you.
-            </p>
-          </div>
-          <div className="pt-2">
-            <Link
-              to="/profile"
-              className="inline-flex items-center justify-center gap-2 bg-zinc-900 hover:bg-zinc-800 active:bg-zinc-950 text-white dark:bg-zinc-100 dark:hover:bg-zinc-200 dark:active:bg-zinc-300 dark:text-zinc-950 rounded-xl px-6 py-3 font-semibold transition-all shadow-xs hover:shadow-md cursor-pointer active:scale-[0.98]"
-            >
-              <span>Set Up Payment Details</span>
-            </Link>
-          </div>
+          <Link
+            to="/profile"
+            className="mt-6 inline-flex items-center justify-center gap-2 rounded-md bg-fg px-4 py-2.5 text-sm font-medium text-canvas transition hover:opacity-90 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg-muted"
+          >
+            Set up payment details
+            <FiArrowRight className="size-4" />
+          </Link>
         </div>
       </main>
     );
   }
 
+  const senderName =
+    profile.business_name ||
+    `${profile.first_name || ""} ${profile.last_name || ""}`.trim() ||
+    "Your business";
+  const senderPlace = [profile.city, profile.country].filter(Boolean).join(", ");
+  const currencySymbol = CURRENCIES.find((c) => c.code === currency)?.symbol ?? currency;
+
   return (
-    <main className="py-6 px-4 lg:py-10 lg:px-8 max-w-4xl mx-auto selection:bg-zinc-100 dark:selection:bg-zinc-800 transition-all">
-      {/* Back navigation */}
-      <div className="mb-6">
-        <Link
-          to="/invoices"
-          className="inline-flex items-center gap-2 text-xs font-semibold text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors"
-        >
-          <FiArrowLeft className="w-4 h-4" />
-          <span>Back to Invoices</span>
-        </Link>
-      </div>
+    <main className="pt-6 px-4 lg:pt-10 lg:px-8 max-w-4xl mx-auto text-fg selection:bg-line-strong">
+      {backLink}
+      {header}
 
-      <div className="mb-8">
-        <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
-          Create Invoice
-        </h1>
-        <p className="mt-1 lg:mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-          Draft a new invoice, specify line items, and select client billing
-          info.
-        </p>
-      </div>
-
-      {errorMsg && (
-        <div className="mb-6 p-4 bg-red-50 dark:bg-red-950/15 border border-red-200/50 dark:border-red-900/30 rounded-2xl flex items-start gap-3 text-sm text-red-600 dark:text-red-400 font-medium">
-          <FiAlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
-          <span>{errorMsg}</span>
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-8">
-        {/* Card 1: Sender & Client Details */}
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xs p-6 lg:p-8 space-y-6">
-          {/* Sender details card block */}
-          <div>
-            <h3 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-4 border-b border-zinc-100 dark:border-zinc-800 pb-2 flex items-center gap-2">
-              <FiBriefcase className="w-3.5 h-3.5" />
-              <span>Sender (From)</span>
-            </h3>
-            {profile ? (
-              <div className="p-4 bg-zinc-50/50 dark:bg-zinc-950/30 rounded-xl border border-zinc-100 dark:border-zinc-900/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <h4 className="font-bold text-sm text-zinc-900 dark:text-zinc-100">
-                    {profile.business_name ||
-                      `${profile.first_name || ""} ${profile.last_name || ""}`.trim() ||
-                      "Your business"}
-                  </h4>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                    {profile.email} • {profile.city || "No city set"},{" "}
-                    {profile.country || "No country set"}
-                  </p>
-                </div>
-                <Link
-                  to="/profile"
-                  className="text-xs font-semibold text-zinc-900 dark:text-zinc-50 hover:underline shrink-0"
-                >
-                  Edit Profile details
-                </Link>
-              </div>
-            ) : (
-              <p className="text-xs text-zinc-400 dark:text-zinc-500 italic">
-                No sender profile loaded.
+      <form onSubmit={handleSubmit} noValidate>
+        <div className="space-y-8 pb-8">
+          {/* From */}
+          <FormSection
+            title="From"
+            aside={
+              <Link to="/profile" className="text-sm text-fg-muted transition-colors hover:text-fg">
+                Edit profile
+              </Link>
+            }
+          >
+            <div>
+              <p className="font-medium text-fg">{senderName}</p>
+              <p className="mt-0.5 text-sm text-fg-muted break-words">
+                {profile.email}
+                {senderPlace && <span className="text-fg-subtle"> · {senderPlace}</span>}
               </p>
-            )}
-          </div>
+            </div>
+          </FormSection>
 
-          {/* Client select block */}
-          <div className="pt-2">
-            <h3 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-4 border-b border-zinc-100 dark:border-zinc-800 pb-2 flex items-center gap-2">
-              <FiUser className="w-3.5 h-3.5" />
-              <span>Client (To)</span>
-            </h3>
-            <div className="max-w-md">
-              <label
-                htmlFor="client_select"
-                className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider mb-1.5"
-              >
-                Select Client <span className="text-red-500">*</span>
-              </label>
-              {clients.length > 0 ? (
-                <select
-                  id="client_select"
-                  required
+          {/* Bill to */}
+          <FormSection title="Bill to">
+            {clients.length > 0 ? (
+              <div className="sm:max-w-sm">
+                <SelectField
+                  label="Client"
                   value={selectedClientId}
-                  onChange={(e) => setSelectedClientId(e.target.value)}
-                  className="block w-full px-3.5 py-2.5 text-sm bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-600 focus:ring-1 focus:ring-zinc-400 dark:focus:ring-zinc-600 transition-all"
+                  error={clientError}
+                  disabled={submitting}
+                  onChange={(e) => {
+                    setSelectedClientId(e.target.value);
+                    if (e.target.value) setClientError(null);
+                  }}
                 >
                   <option value="" disabled>
-                    Choose a client from directory
+                    Choose a client
                   </option>
                   {clients.map((client) => (
                     <option key={client.id} value={client.id}>
                       {client.client_name}
                     </option>
                   ))}
-                </select>
-              ) : (
-                <div className="p-4 bg-amber-50/50 dark:bg-amber-950/15 border border-amber-200/50 dark:border-amber-900/30 rounded-xl flex items-start justify-between gap-3 flex-wrap">
-                  <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed font-medium">
-                    No clients created yet. Please create a client in the
-                    directory first to draft invoices!
-                  </p>
-                  <Link
-                    to="/clients"
-                    className="text-xs font-bold text-zinc-900 dark:text-zinc-100 hover:underline shrink-0"
-                  >
-                    Go to Clients
-                  </Link>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+                </SelectField>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3 rounded-md border border-line bg-surface p-4 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-fg">You haven't added any clients yet.</p>
+                <Link
+                  to="/clients"
+                  className="group inline-flex shrink-0 items-center gap-1.5 text-sm font-medium text-fg transition-colors hover:text-fg-muted"
+                >
+                  Add a client
+                  <FiArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+                </Link>
+              </div>
+            )}
+          </FormSection>
 
-        {/* Card 2: Invoice Metadata details */}
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xs p-6 lg:p-8 space-y-6">
-          <h3 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-4 border-b border-zinc-100 dark:border-zinc-800 pb-2 flex items-center gap-2">
-            <FiFileText className="w-3.5 h-3.5" />
-            <span>Invoice Specifications</span>
-          </h3>
+          {/* Details */}
+          <FormSection title="Details">
+            <div className="grid gap-5 sm:grid-cols-2 md:grid-cols-4">
+              <div>
+                <span className="mb-1.5 block text-sm font-medium text-fg">Invoice number</span>
+                <p className="flex h-[42px] items-center rounded-md border border-line bg-canvas px-3 font-mono text-sm tabular-nums text-fg-muted">
+                  {invoiceNumber || <span className="text-fg-subtle">Choose a client</span>}
+                </p>
+              </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
-            <div>
-              <label
-                htmlFor="invoice_number"
-                className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider mb-1.5"
-              >
-                Invoice Number
-              </label>
-              <input
-                id="invoice_number"
-                type="text"
-                readOnly
-                disabled={true}
-                value={invoiceNumber}
-                className="block w-full px-3.5 py-2.5 text-sm bg-zinc-105 dark:bg-zinc-950/60 text-zinc-500 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 rounded-xl font-semibold cursor-not-allowed select-none"
+              <div>
+                <span className="mb-1.5 block text-sm font-medium text-fg">Currency</span>
+                <p className="flex h-[42px] items-center rounded-md border border-line bg-canvas px-3 font-mono text-sm text-fg-muted">
+                  {currency} ({currencySymbol})
+                </p>
+              </div>
+
+              <AuthField
+                label="Issue date"
+                type="date"
+                disabled={submitting}
+                value={issueDate}
+                onChange={(e) => setIssueDate(e.target.value)}
+                className="tabular-nums"
+              />
+
+              <AuthField
+                label="Due date"
+                labelAside={<Optional />}
+                type="date"
+                min={issueDate || undefined}
+                disabled={submitting}
+                value={dueDate}
+                error={dueDateError}
+                onChange={(e) => {
+                  setDueDate(e.target.value);
+                  setDueDateError(null);
+                }}
+                className="tabular-nums"
               />
             </div>
+          </FormSection>
 
-            <div>
-              <label
-                htmlFor="currency_select"
-                className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider mb-1.5"
-              >
-                Currency <span className="text-red-500">*</span>
-              </label>
-              <select
-                id="currency_select"
-                required
-                disabled={submitting}
-                value={currency}
-                onChange={(e) => setCurrency(e.target.value)}
-                className="block w-full px-3.5 py-2.5 text-sm bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-600 focus:ring-1 focus:ring-zinc-400 dark:focus:ring-zinc-600 transition-all disabled:opacity-50"
-              >
-                {CURRENCIES.map((c) => (
-                  <option key={c.code} value={c.code}>
-                    {c.symbol} {c.code}
-                  </option>
-                ))}
-              </select>
-            </div>
+          {/* Line items */}
+          <LineItemsSection
+            lineItems={lineItems}
+            currency={currency}
+            submitting={submitting}
+            showErrors={showItemErrors}
+            onLineItemChange={handleLineItemChange}
+            onAddLineItem={addLineItem}
+            onRemoveLineItem={removeLineItem}
+          />
 
-            <div>
-              <label
-                htmlFor="issue_date"
-                className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider mb-1.5"
-              >
-                Issue Date <span className="text-red-500">*</span>
-              </label>
-              <div className="relative flex items-center">
-                <FiCalendar className="absolute left-3 text-zinc-400 dark:text-zinc-600 w-4 h-4 pointer-events-none" />
-                <input
-                  id="issue_date"
-                  type="date"
-                  required
-                  disabled={submitting}
-                  value={issueDate}
-                  onChange={(e) => setIssueDate(e.target.value)}
-                  className="block w-full pl-9 pr-3.5 py-2.5 text-sm bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-600 focus:ring-1 focus:ring-zinc-400 dark:focus:ring-zinc-600 transition-all disabled:opacity-50"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label
-                htmlFor="due_date"
-                className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider mb-1.5"
-              >
-                Due Date
-              </label>
-              <div className="relative flex items-center">
-                <FiCalendar className="absolute left-3 text-zinc-400 dark:text-zinc-600 w-4 h-4 pointer-events-none" />
-                <input
-                  id="due_date"
-                  type="date"
-                  disabled={submitting}
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                  className="block w-full pl-9 pr-3.5 py-2.5 text-sm bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-600 focus:ring-1 focus:ring-zinc-400 dark:focus:ring-zinc-600 transition-all disabled:opacity-50"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Card 3: Dynamic Line Items array */}
-        <LineItemsSection
-          lineItems={lineItems}
-          currency={currency}
-          submitting={submitting}
-          onLineItemChange={handleLineItemChange}
-          onAddLineItem={addLineItem}
-          onRemoveLineItem={removeLineItem}
-        />
-
-        {/* Card 4: Optional Notes / Terms */}
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xs p-6 lg:p-8 space-y-4">
-          <h3 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest border-b border-zinc-100 dark:border-zinc-800 pb-2">
-            Invoice Notes & Terms (Optional)
-          </h3>
-          <div>
+          {/* Notes */}
+          <FormSection title="Notes & terms" aside={<Optional />}>
             <textarea
               id="invoice_notes"
+              aria-label="Notes and terms"
               rows={4}
               disabled={submitting}
-              placeholder="e.g. Please pay within 30 days via direct bank transfer to our credentials."
+              placeholder="e.g. Payment due within 14 days by bank transfer."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="block w-full px-3.5 py-2.5 text-sm bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-600 focus:ring-1 focus:ring-zinc-400 dark:focus:ring-zinc-600 transition-all resize-none disabled:opacity-50"
+              className="block w-full resize-none rounded-md border border-line-strong bg-surface px-3 py-2.5 text-sm text-fg placeholder:text-fg-subtle transition-colors hover:border-fg-subtle focus:border-fg-muted focus:outline-none disabled:opacity-50"
             />
-          </div>
+          </FormSection>
         </div>
 
-        {/* Submission actions */}
-        <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800 flex justify-end gap-3">
-          <Link
-            to="/invoices"
-            className="px-5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 text-sm font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-all cursor-pointer select-none"
-          >
-            Cancel
-          </Link>
-          <button
-            type="submit"
-            disabled={submitting || clients.length === 0}
-            className="bg-zinc-900 hover:bg-zinc-800 active:bg-zinc-950 text-white dark:bg-zinc-100 dark:hover:bg-zinc-200 dark:active:bg-zinc-300 dark:text-zinc-950 rounded-xl px-6 py-2.5 text-sm font-semibold transition-all shadow-xs active:scale-[0.98] cursor-pointer flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
-          >
-            {submitting ? (
-              <>
-                <FiLoader className="animate-spin -ml-1 mr-2.5 h-4 w-4" />
-                Saving invoice...
-              </>
-            ) : (
-              "Save & Preview"
+        {/* Save bar */}
+        <div className="sticky bottom-0 -mx-4 lg:-mx-8 flex flex-col-reverse gap-3 border-t border-line bg-canvas/85 px-4 py-3 backdrop-blur-md sm:flex-row sm:items-center sm:justify-end lg:px-8">
+          <p aria-live="polite" className="min-h-5 text-sm sm:mr-auto">
+            {errorMsg && (
+              <span role="alert" className="flex items-start gap-1.5 text-danger">
+                <FiAlertCircle className="mt-0.5 size-4 shrink-0" />
+                {errorMsg}
+              </span>
             )}
-          </button>
+          </p>
+          <div className="flex gap-2">
+            <Link
+              to="/invoices"
+              className="flex-1 rounded-md px-3.5 py-2.5 text-center text-sm font-medium text-fg-muted transition-colors hover:bg-surface hover:text-fg sm:flex-none"
+            >
+              Cancel
+            </Link>
+            <button
+              type="submit"
+              disabled={submitting || clients.length === 0}
+              className="inline-flex flex-1 items-center justify-center gap-2 rounded-md bg-fg px-4 py-2.5 text-sm font-medium text-canvas transition hover:opacity-90 active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg-muted sm:flex-none"
+            >
+              {submitting && <FiLoader className="size-4 animate-spin" />}
+              {submitting ? "Saving" : "Save & preview"}
+            </button>
+          </div>
         </div>
       </form>
     </main>

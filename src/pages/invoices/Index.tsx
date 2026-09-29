@@ -1,20 +1,28 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
+import { formatDate } from "../../utils/date";
+import { FormAlert } from "../../components/auth/FormAlert";
+import { Dialog } from "../../components/ui/Dialog";
+import { StatusDot } from "../../components/invoices/status";
+import {
+  STATUSES,
+  STATUS_STYLES,
+  type InvoiceStatus,
+} from "../../components/invoices/statusStyles";
 import {
   FiSearch,
   FiPlus,
-  FiMoreVertical,
+  FiMoreHorizontal,
   FiEye,
   FiEdit2,
   FiTrash2,
-  FiFileText,
-  FiCalendar,
   FiX,
   FiLoader,
-  FiCheckCircle,
+  FiCheck,
   FiAlertCircle,
   FiArrowRight,
+  FiRefreshCw,
 } from "react-icons/fi";
 
 interface LineItem {
@@ -36,7 +44,7 @@ interface Invoice {
   invoice_number: string;
   issue_date: string;
   due_date: string;
-  status: "draft" | "sent" | "paid";
+  status: InvoiceStatus;
   notes?: string;
   created_at: string;
   line_items: LineItem[];
@@ -44,10 +52,20 @@ interface Invoice {
   currency?: string | null;
 }
 
+const menuItemClass =
+  "w-full flex items-center gap-2.5 px-3 py-2 text-left text-sm text-fg-muted hover:text-fg hover:bg-surface focus-visible:bg-surface focus-visible:text-fg focus-visible:outline-none transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed";
+
+const floatingLayerClass =
+  "fixed z-40 rounded-md border border-line bg-raised py-1 shadow-[0_12px_32px_-12px_rgb(0_0_0/0.35)] animate-rise";
+
+const primaryButtonClass =
+  "inline-flex items-center justify-center gap-2 rounded-md bg-fg px-4 py-2.5 text-sm font-medium text-canvas transition hover:opacity-90 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg-muted cursor-pointer";
+
 const InvoicesPage = () => {
   const navigate = useNavigate();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -65,13 +83,14 @@ const InvoicesPage = () => {
   const fetchInvoices = async () => {
     try {
       setLoading(true);
+      setLoadError(null);
       const {
         data: { user },
         error: authError,
       } = await supabase.auth.getUser();
 
       if (authError || !user) {
-        throw new Error("Could not retrieve active session.");
+        throw new Error("Your session has expired. Sign in again to see your invoices.");
       }
 
       const { data, error: dbError } = await supabase
@@ -89,7 +108,7 @@ const InvoicesPage = () => {
     } catch (err) {
       const error = err as Error;
       console.error("Error fetching invoices:", error);
-      setActionError(error.message || "Failed to load invoices.");
+      setLoadError(error.message || "We couldn't load your invoices.");
     } finally {
       setLoading(false);
     }
@@ -128,10 +147,10 @@ const InvoicesPage = () => {
 
         const missing = [];
         if (!profile) {
-          missing.push("Bank Name", "Account Number");
+          missing.push("bank name", "account number");
         } else {
-          if (!profile.bank_name) missing.push("Bank Name");
-          if (!profile.account_number) missing.push("Account Number");
+          if (!profile.bank_name) missing.push("bank name");
+          if (!profile.account_number) missing.push("account number");
         }
 
         setMissingFields(missing);
@@ -147,27 +166,34 @@ const InvoicesPage = () => {
     document.title = "My Invoices | Invoicely";
   }, []);
 
-  // Close menus on scroll/resize
+  const closeMenus = () => {
+    setActiveMenuId(null);
+    setActiveStatusSelectorId(null);
+    setMenuPosition(null);
+    setStatusSelectorPosition(null);
+  };
+
+  // Close menus on scroll, resize, or Escape
   useEffect(() => {
     if (activeMenuId || activeStatusSelectorId) {
-      const handleClose = () => {
-        setActiveMenuId(null);
-        setActiveStatusSelectorId(null);
-        setMenuPosition(null);
-        setStatusSelectorPosition(null);
+      const handleKey = (e: KeyboardEvent) => {
+        if (e.key === "Escape") closeMenus();
       };
-      window.addEventListener("scroll", handleClose, true);
-      window.addEventListener("resize", handleClose);
+      window.addEventListener("scroll", closeMenus, true);
+      window.addEventListener("resize", closeMenus);
+      window.addEventListener("keydown", handleKey);
       return () => {
-        window.removeEventListener("scroll", handleClose, true);
-        window.removeEventListener("resize", handleClose);
+        window.removeEventListener("scroll", closeMenus, true);
+        window.removeEventListener("resize", closeMenus);
+        window.removeEventListener("keydown", handleKey);
       };
     }
   }, [activeMenuId, activeStatusSelectorId]);
 
-  const handleStatusChange = async (invoiceId: string, newStatus: "draft" | "sent" | "paid") => {
+  const handleStatusChange = async (invoiceId: string, newStatus: InvoiceStatus) => {
     try {
       setSubmitting(true);
+      setActionError(null);
       const { error } = await supabase
         .from("invoices")
         .update({ status: newStatus })
@@ -179,11 +205,12 @@ const InvoicesPage = () => {
       setInvoices((prev) =>
         prev.map((inv) => (inv.id === invoiceId ? { ...inv, status: newStatus } : inv))
       );
-      setActiveStatusSelectorId(null);
+      closeMenus();
     } catch (err) {
       const error = err as Error;
       console.error("Error updating status:", error);
-      alert(error.message || "Failed to update invoice status.");
+      setActionError(error.message || "The status didn't change. Try again.");
+      closeMenus();
     } finally {
       setSubmitting(false);
     }
@@ -211,7 +238,8 @@ const InvoicesPage = () => {
     } catch (err) {
       const error = err as Error;
       console.error("Error deleting invoice:", error);
-      setActionError(error.message || "Failed to delete invoice.");
+      setActionError(error.message || "The invoice wasn't deleted. Try again.");
+      setInvoiceToDelete(null);
     } finally {
       setSubmitting(false);
     }
@@ -221,18 +249,16 @@ const InvoicesPage = () => {
   const calculateTotal = (lineItems: LineItem[] = []) =>
     lineItems.reduce((sum, item) => sum + (item.quantity || 0) * (item.rate || 0), 0);
 
-  // Helper: format Currency
-  const formatCurrency = (amount: number, currencyCode: string = "NGN") => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: currencyCode || "NGN",
+  // Helper: amount without symbol; the currency code sits beside it so columns align
+  const formatAmount = (amount: number) =>
+    new Intl.NumberFormat("en-US", {
       minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     }).format(amount);
-  };
 
   // Filter invoices based on search
   const filteredInvoices = invoices.filter((inv) => {
-    const searchLower = searchQuery.toLowerCase();
+    const searchLower = searchQuery.trim().toLowerCase();
     const clientName = inv.clients?.client_name || "";
     const invNumber = inv.invoice_number || "";
     return (
@@ -273,434 +299,381 @@ const InvoicesPage = () => {
     }
   };
 
-  const getStatusBadgeStyles = (status: "draft" | "sent" | "paid") => {
-    switch (status) {
-      case "paid":
-        return "bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400 border-green-200/50 dark:border-green-900/30";
-      case "sent":
-        return "bg-blue-50 text-blue-700 dark:bg-blue-950/20 dark:text-blue-400 border-blue-200/50 dark:border-blue-900/30";
-      default:
-        return "bg-zinc-100 text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800";
-    }
-  };
-
   const selectedMenuInvoice = invoices.find((inv) => inv.id === activeMenuId);
   const selectedStatusInvoice = invoices.find((inv) => inv.id === activeStatusSelectorId);
 
+  const renderStatusButton = (invoice: Invoice) => (
+    <button
+      type="button"
+      onClick={(e) => handleStatusSelectorToggle(e, invoice.id)}
+      aria-haspopup="menu"
+      aria-expanded={activeStatusSelectorId === invoice.id}
+      aria-label={`Status: ${invoice.status}. Change status`}
+      className={`inline-flex items-center gap-1.5 rounded-full border border-line px-2 py-0.5 text-xs font-medium capitalize transition-colors hover:border-line-strong hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-fg-muted cursor-pointer ${STATUS_STYLES[invoice.status].text}`}
+    >
+      <StatusDot status={invoice.status} />
+      {invoice.status}
+    </button>
+  );
+
+  const renderActionsButton = (invoice: Invoice) => (
+    <button
+      type="button"
+      onClick={(e) => handleMenuToggle(e, invoice.id)}
+      aria-haspopup="menu"
+      aria-expanded={activeMenuId === invoice.id}
+      aria-label={`Actions for ${invoice.invoice_number || "invoice"}`}
+      className="flex size-8 items-center justify-center rounded-md text-fg-subtle transition-colors hover:bg-raised hover:text-fg focus-visible:outline-2 focus-visible:outline-fg-muted cursor-pointer"
+    >
+      <FiMoreHorizontal className="size-4" />
+    </button>
+  );
+
+  const renderAmount = (invoice: Invoice) => (
+    <span className="font-mono tabular-nums whitespace-nowrap">
+      <span className="text-fg">{formatAmount(calculateTotal(invoice.line_items))}</span>{" "}
+      <span className="text-xs text-fg-subtle">{invoice.currency || "NGN"}</span>
+    </span>
+  );
+
   return (
-    <main className="py-6 px-4 lg:py-10 lg:px-8 max-w-7xl mx-auto selection:bg-zinc-100 dark:selection:bg-zinc-800 transition-all">
+    <main className="py-6 px-4 lg:py-10 lg:px-8 max-w-7xl mx-auto text-fg selection:bg-line-strong">
       {/* Header section */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
+          <h1 className="text-2xl lg:text-3xl font-semibold tracking-[-0.03em] text-fg">
             Invoices
           </h1>
-          <p className="mt-1 lg:mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-            Create, manage, and track payment history of your billing invoices.
+          <p className="mt-1.5 text-sm text-fg-muted">
+            Create invoices, download them as PDFs, and track which ones are paid.
           </p>
         </div>
-        <Link
-          to="/invoices/new"
-          className="inline-flex items-center justify-center gap-2 bg-zinc-900 hover:bg-zinc-800 active:bg-zinc-950 text-white dark:bg-zinc-100 dark:hover:bg-zinc-200 dark:active:bg-zinc-300 dark:text-zinc-950 rounded-xl px-5 py-2.5 text-sm font-semibold transition-all shadow-xs hover:shadow-sm active:scale-[0.98] cursor-pointer shrink-0 w-full md:w-auto text-center"
-        >
-          <FiPlus className="w-4 h-4 shrink-0" />
-          <span>New Invoice</span>
+        <Link to="/invoices/new" className={`${primaryButtonClass} shrink-0 w-full md:w-auto`}>
+          <FiPlus className="size-4 shrink-0" />
+          New invoice
         </Link>
       </div>
 
-      {/* Profile Setup Reminder Banner */}
+      {/* Profile Setup Reminder */}
       {missingFields.length > 0 && (
-        <div className="mb-8 p-5 md:p-6 bg-linear-to-r from-amber-50 to-orange-50 dark:from-amber-950/10 dark:to-orange-950/10 border border-amber-200/60 dark:border-amber-900/20 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs transition-all animate-fade-in">
-          <div className="flex items-start gap-4">
-            <div className="p-2.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-xl shrink-0">
-              <FiAlertCircle className="w-5 h-5" />
-            </div>
+        <div className="mb-8 flex flex-col gap-4 rounded-md border border-line bg-surface p-4 sm:flex-row sm:items-center sm:justify-between animate-rise">
+          <div className="flex items-start gap-3">
+            <FiAlertCircle className="mt-0.5 size-4 shrink-0 text-fg-muted" />
             <div>
-              <h3 className="font-semibold text-zinc-900 dark:text-zinc-50 text-sm md:text-base">
-                Welcome! Let's complete your profile
-              </h3>
-              <p className="text-xs md:text-sm text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed max-w-2xl">
-                Please take a moment to complete your profile details. To
-                dismiss this reminder, you need to set up your:{" "}
-                <span className="font-semibold text-amber-800 dark:text-amber-300">
-                  {missingFields.join(", ")}
-                </span>
-                .{" "}
+              <p className="text-sm font-medium text-fg">
+                Add your payment details before you send an invoice
+              </p>
+              <p className="mt-1 text-sm text-fg-muted leading-relaxed">
+                Every invoice prints where to pay you. Still missing:{" "}
+                <span className="text-fg">{missingFields.join(" and ")}</span>.
               </p>
             </div>
           </div>
           <Link
             to="/profile"
-            className="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 text-xs md:text-sm font-semibold bg-zinc-900 hover:bg-zinc-800 active:bg-zinc-950 text-white dark:bg-zinc-100 dark:hover:bg-zinc-200 dark:active:bg-zinc-300 dark:text-zinc-950 rounded-xl shrink-0 shadow-xs hover:shadow-md active:scale-[0.98] transition-all cursor-pointer w-full sm:w-auto"
+            className="group inline-flex shrink-0 items-center gap-1.5 self-start pl-7 text-sm font-medium text-fg hover:text-fg-muted transition-colors sm:self-auto sm:pl-0"
           >
-            <span>Complete Profile</span>
-            <FiArrowRight className="w-4 h-4 shrink-0" />
+            Complete profile
+            <FiArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
           </Link>
         </div>
       )}
 
-      {actionError && (
-        <div className="mb-6 p-4 bg-red-50 dark:bg-red-950/15 border border-red-200/50 dark:border-red-900/30 rounded-2xl flex items-start gap-3 text-sm text-red-600 dark:text-red-400 font-medium">
-          <FiAlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
-          <span>{actionError}</span>
-        </div>
-      )}
+      <FormAlert kind="error" message={actionError} />
 
-      {/* Action panel (Search) */}
+      {/* Search */}
       {invoices.length > 0 && (
-        <div className="mb-6 max-w-md">
-          <div className="relative flex items-center">
-            <FiSearch className="absolute left-3.5 text-zinc-400 dark:text-zinc-500 w-4 h-4 pointer-events-none" />
+        <div className="mb-4 flex items-center justify-between gap-4">
+          <div className="relative flex w-full max-w-sm items-center">
+            <FiSearch className="pointer-events-none absolute left-3 size-4 text-fg-subtle" />
             <input
-              type="text"
-              placeholder="Search by invoice number or client name..."
+              type="search"
+              aria-label="Search invoices"
+              placeholder="Search by invoice number or client"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="block w-full pl-10 pr-4 py-2.5 text-sm bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 border border-zinc-200 dark:border-zinc-800 rounded-xl placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-600 focus:ring-1 focus:ring-zinc-400 dark:focus:ring-zinc-600 transition-all shadow-xs"
+              className="block w-full rounded-md border border-line-strong bg-surface py-2.5 pl-9 pr-9 text-sm text-fg placeholder:text-fg-subtle transition-colors hover:border-fg-subtle focus:border-fg-muted focus:outline-none [&::-webkit-search-cancel-button]:appearance-none"
             />
             {searchQuery && (
               <button
+                type="button"
                 onClick={() => setSearchQuery("")}
-                className="absolute right-3.5 p-0.5 text-zinc-400 hover:text-zinc-700 dark:text-zinc-500 dark:hover:text-zinc-200 rounded-full transition-colors cursor-pointer"
+                aria-label="Clear search"
+                className="absolute right-1.5 flex size-7 items-center justify-center rounded text-fg-subtle hover:text-fg transition-colors cursor-pointer"
               >
-                <FiX className="w-3.5 h-3.5" />
+                <FiX className="size-3.5" />
               </button>
             )}
           </div>
+          <p className="hidden shrink-0 text-sm text-fg-subtle tabular-nums sm:block" aria-live="polite">
+            {searchQuery.trim()
+              ? `${filteredInvoices.length} of ${invoices.length}`
+              : `${invoices.length} ${invoices.length === 1 ? "invoice" : "invoices"}`}
+          </p>
         </div>
       )}
 
       {/* Listing Content */}
       {loading ? (
-        // Skeleton view
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 space-y-4 shadow-xs animate-pulse">
-          <div className="h-6 w-48 bg-zinc-200 dark:bg-zinc-800 rounded-md"></div>
-          <div className="space-y-3">
-            {[1, 2, 3, 4].map((i) => (
-              <div
-                key={i}
-                className="h-14 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-100 dark:border-zinc-900/50"
-              ></div>
-            ))}
-          </div>
+        <div aria-busy="true" aria-label="Loading invoices" className="border-y border-line divide-y divide-line">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="flex items-center gap-6 py-4 motion-safe:animate-pulse">
+              <div className="h-3.5 w-20 rounded bg-line" />
+              <div className="h-3.5 w-40 rounded bg-line" />
+              <div className="ml-auto h-3.5 w-24 rounded bg-line" />
+            </div>
+          ))}
+        </div>
+      ) : loadError && invoices.length === 0 ? (
+        <div className="max-w-md border-t border-fg pt-5">
+          <h2 className="font-medium text-fg">We couldn't load your invoices</h2>
+          <p className="mt-1.5 text-sm text-fg-muted leading-relaxed">{loadError}</p>
+          <button
+            type="button"
+            onClick={fetchInvoices}
+            className="mt-5 inline-flex items-center gap-2 rounded-md border border-line-strong px-3.5 py-2 text-sm font-medium text-fg hover:border-fg-subtle hover:bg-surface transition-colors cursor-pointer"
+          >
+            <FiRefreshCw className="size-3.5" />
+            Try again
+          </button>
         </div>
       ) : invoices.length === 0 ? (
-        // Empty State
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-8 md:p-16 text-center shadow-xs max-w-2xl mx-auto flex flex-col items-center">
-          <div className="w-16 h-16 bg-zinc-50 dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-900/60 rounded-2xl flex items-center justify-center text-zinc-400 dark:text-zinc-500 mb-6 shadow-xs select-none">
-            <FiFileText className="w-8 h-8" />
-          </div>
-          <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-50 mb-2">
-            No invoices drafted yet
-          </h2>
-          <p className="text-zinc-500 dark:text-zinc-400 text-sm max-w-sm mb-8 leading-relaxed">
-            Create professional billing invoices for your clients and track their payment statuses in one clean list.
+        <div className="max-w-md border-t border-fg pt-5">
+          <h2 className="font-medium text-fg">No invoices yet</h2>
+          <p className="mt-1.5 text-sm text-fg-muted leading-relaxed">
+            Write your first invoice and download it as a PDF. Every invoice you
+            create is listed here, with whether it's been sent and paid.
           </p>
-          <Link
-            to="/invoices/new"
-            className="inline-flex items-center justify-center gap-2 bg-zinc-900 hover:bg-zinc-800 active:bg-zinc-950 text-white dark:bg-zinc-100 dark:hover:bg-zinc-200 dark:active:bg-zinc-300 dark:text-zinc-950 rounded-xl px-6 py-3 text-sm font-semibold transition-all shadow-xs hover:shadow-md active:scale-[0.98] cursor-pointer"
-          >
-            <FiPlus className="w-4 h-4 shrink-0" />
-            <span>Create Your First Invoice</span>
+          <Link to="/invoices/new" className={`${primaryButtonClass} mt-6`}>
+            <FiPlus className="size-4 shrink-0" />
+            Create your first invoice
           </Link>
         </div>
       ) : filteredInvoices.length === 0 ? (
-        // No Search Results
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-12 text-center shadow-xs">
-          <p className="text-zinc-500 dark:text-zinc-400 text-sm">
-            No invoices match your search query:{" "}
-            <span className="font-semibold text-zinc-900 dark:text-zinc-50">
-              "{searchQuery}"
-            </span>
+        <div className="border-y border-line py-10 text-center">
+          <p className="text-sm text-fg-muted">
+            No invoices match <span className="text-fg">"{searchQuery.trim()}"</span>
           </p>
+          <button
+            type="button"
+            onClick={() => setSearchQuery("")}
+            className="mt-3 text-sm font-medium text-fg hover:text-fg-muted transition-colors cursor-pointer"
+          >
+            Clear search
+          </button>
         </div>
       ) : (
-        // Invoice Table view
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xs overflow-hidden transition-colors">
+        <>
           {/* Desktop Table View */}
-          <div className="hidden md:block overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+          <div className="hidden md:block">
+            <table className="w-full border-collapse text-left text-sm">
               <thead>
-                <tr className="border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/20 select-none">
-                  <th className="px-6 py-4.5 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                    Invoice
+                <tr className="border-y border-line text-xs font-medium text-fg-muted">
+                  <th scope="col" className="py-2.5 pr-4 font-medium">Invoice</th>
+                  <th scope="col" className="py-2.5 pr-4 font-medium">Client</th>
+                  <th scope="col" className="py-2.5 pr-4 font-medium">Due</th>
+                  <th scope="col" className="py-2.5 pr-6 text-right font-medium">Amount</th>
+                  <th scope="col" className="py-2.5 pr-4 font-medium">Status</th>
+                  <th scope="col" className="w-10 py-2.5">
+                    <span className="sr-only">Actions</span>
                   </th>
-                  <th className="px-6 py-4.5 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                    Client Name
-                  </th>
-                  <th className="px-6 py-4.5 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                    Due Date
-                  </th>
-                  <th className="px-6 py-4.5 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                    Total Amount
-                  </th>
-                  <th className="px-6 py-4.5 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="w-16 px-6 py-4.5"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+              <tbody className="divide-y divide-line border-b border-line">
                 {filteredInvoices.map((invoice) => (
                   <tr
                     key={invoice.id}
                     onClick={() => navigate(`/invoices/${invoice.id}`)}
-                    className="hover:bg-zinc-50/50 dark:hover:bg-zinc-900/20 transition-colors group cursor-pointer"
+                    className="group cursor-pointer transition-colors hover:bg-surface"
                   >
-                    <td className="px-6 py-4.5">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-950 border border-zinc-200/50 dark:border-zinc-800/50 flex items-center justify-center text-zinc-700 dark:text-zinc-300 font-semibold text-xs shrink-0 select-none">
-                          <FiFileText className="w-3.5 h-3.5" />
-                        </div>
-                        <span className="font-semibold text-zinc-900 dark:text-zinc-50 text-sm">
-                          {invoice.invoice_number || "INV-—"}
-                        </span>
-                      </div>
+                    <td className="py-3.5 pr-4">
+                      <Link
+                        to={`/invoices/${invoice.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="rounded-sm font-mono text-sm text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg-muted"
+                      >
+                        {invoice.invoice_number || "Unnumbered"}
+                      </Link>
                     </td>
-                    <td className="px-6 py-4.5 text-sm text-zinc-900 dark:text-zinc-100 font-medium">
+                    <td className="max-w-[16rem] truncate py-3.5 pr-4 text-fg">
                       {invoice.clients?.client_name || (
-                        <span className="text-zinc-300 dark:text-zinc-700 italic select-none">
-                          Anonymous Client
-                        </span>
+                        <span className="text-fg-subtle">No client</span>
                       )}
                     </td>
-                    <td className="px-6 py-4.5 text-sm text-zinc-500 dark:text-zinc-400">
-                      {invoice.due_date ? (
-                        <span className="inline-flex items-center gap-1.5">
-                          <FiCalendar className="w-3.5 h-3.5 shrink-0 opacity-60" />
-                          <span>{invoice.due_date}</span>
-                        </span>
-                      ) : (
-                        <span className="text-zinc-300 dark:text-zinc-700 italic select-none">—</span>
+                    <td className="py-3.5 pr-4 whitespace-nowrap tabular-nums text-fg-muted">
+                      {invoice.due_date ? formatDate(invoice.due_date) : (
+                        <span className="text-fg-subtle">No due date</span>
                       )}
                     </td>
-                    <td className="px-6 py-4.5 text-sm font-semibold text-zinc-900 dark:text-zinc-50 whitespace-nowrap">
-                      {formatCurrency(calculateTotal(invoice.line_items), invoice.currency || "NGN")}
-                    </td>
-                    <td className="px-6 py-4.5">
-                      <button
-                        onClick={(e) => handleStatusSelectorToggle(e, invoice.id)}
-                        className={`inline-flex items-center justify-center border rounded-full px-2.5 py-0.5 text-xs font-semibold select-none cursor-pointer transition-all hover:scale-[1.02] active:scale-98 ${getStatusBadgeStyles(
-                          invoice.status
-                        )}`}
-                      >
-                        <span className="capitalize">{invoice.status}</span>
-                      </button>
-                    </td>
-                    <td className="px-6 py-4.5 text-right relative">
-                      <button
-                        onClick={(e) => handleMenuToggle(e, invoice.id)}
-                        className="p-1.5 text-zinc-400 hover:text-zinc-700 dark:text-zinc-500 dark:hover:text-zinc-200 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-950 transition-colors cursor-pointer"
-                      >
-                        <FiMoreVertical className="w-4 h-4" />
-                      </button>
-                    </td>
+                    <td className="py-3.5 pr-6 text-right">{renderAmount(invoice)}</td>
+                    <td className="py-3.5 pr-4">{renderStatusButton(invoice)}</td>
+                    <td className="py-2 text-right">{renderActionsButton(invoice)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
 
-          {/* Mobile Card List View */}
-          <div className="block md:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
+          {/* Mobile List View */}
+          <ul className="md:hidden border-y border-line divide-y divide-line">
             {filteredInvoices.map((invoice) => (
-              <div
+              <li
                 key={invoice.id}
                 onClick={() => navigate(`/invoices/${invoice.id}`)}
-                className="p-5 flex flex-col gap-3.5 relative hover:bg-zinc-50/50 dark:hover:bg-zinc-900/10 transition-colors cursor-pointer"
+                className="flex flex-col gap-2.5 py-4 cursor-pointer"
               >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-950 border border-zinc-200/50 dark:border-zinc-800/50 flex items-center justify-center text-zinc-700 dark:text-zinc-300 font-semibold text-xs shrink-0 select-none">
-                      <FiFileText className="w-3.5 h-3.5" />
-                    </div>
-                    <div>
-                      <span className="font-semibold text-zinc-900 dark:text-zinc-50 text-sm block">
-                        {invoice.invoice_number || "INV-—"}
-                      </span>
-                      <span className="text-xs text-zinc-450 dark:text-zinc-400 font-medium">
-                        {invoice.clients?.client_name || "Anonymous Client"}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={(e) => handleStatusSelectorToggle(e, invoice.id)}
-                      className={`inline-flex items-center justify-center border rounded-full px-2.5 py-0.5 text-[10px] font-semibold select-none cursor-pointer transition-all ${getStatusBadgeStyles(
-                        invoice.status
-                      )}`}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <Link
+                      to={`/invoices/${invoice.id}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="block truncate font-medium text-fg"
                     >
-                      <span className="capitalize">{invoice.status}</span>
-                    </button>
-                    <button
-                      onClick={(e) => handleMenuToggle(e, invoice.id)}
-                      className="p-1.5 text-zinc-400 hover:text-zinc-700 dark:text-zinc-500 dark:hover:text-zinc-200 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-950 transition-colors cursor-pointer"
-                    >
-                      <FiMoreVertical className="w-4 h-4" />
-                    </button>
+                      {invoice.clients?.client_name || "No client"}
+                    </Link>
+                    <span className="font-mono text-xs text-fg-subtle">
+                      {invoice.invoice_number || "Unnumbered"}
+                    </span>
                   </div>
+                  <div className="shrink-0 pt-0.5 text-sm">{renderAmount(invoice)}</div>
                 </div>
 
-                <div className="flex items-center justify-between pl-11 text-xs">
-                  <div className="text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
-                    <FiCalendar className="w-3.5 h-3.5 opacity-60" />
-                    <span>Due: {invoice.due_date || "—"}</span>
-                  </div>
-                  <div className="text-right font-bold text-zinc-900 dark:text-zinc-50 text-sm">
-                    {formatCurrency(calculateTotal(invoice.line_items), invoice.currency || "NGN")}
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs text-fg-muted tabular-nums">
+                    {invoice.due_date ? `Due ${formatDate(invoice.due_date)}` : "No due date"}
+                  </span>
+                  <div className="-my-1 -mr-1.5 flex items-center gap-1">
+                    {renderStatusButton(invoice)}
+                    {renderActionsButton(invoice)}
                   </div>
                 </div>
-              </div>
+              </li>
             ))}
-          </div>
-        </div>
+          </ul>
+        </>
       )}
 
-      {/* Context Actions Menu (Fixed positioned viewport portal to prevent table bounds clipping) */}
+      {/* Context Actions Menu (fixed to the viewport so the table can't clip it) */}
       {activeMenuId && selectedMenuInvoice && menuPosition && (
         <>
+          <div className="fixed inset-0 z-30" onClick={closeMenus} />
           <div
-            className="fixed inset-0 z-30"
-            onClick={() => {
-              setActiveMenuId(null);
-              setMenuPosition(null);
-            }}
-          />
-          <div
-            style={{
-              position: "fixed",
-              top: `${menuPosition.top + 4}px`,
-              right: `${menuPosition.right}px`,
-            }}
-            className="w-36 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-lg py-1.5 z-40 animate-fade-in"
+            role="menu"
+            aria-label={`Actions for ${selectedMenuInvoice.invoice_number || "invoice"}`}
+            style={{ top: `${menuPosition.top + 4}px`, right: `${menuPosition.right}px` }}
+            className={`${floatingLayerClass} w-44`}
           >
             <button
+              role="menuitem"
+              autoFocus
               onClick={() => navigate(`/invoices/${selectedMenuInvoice.id}`)}
-              className="w-full text-left px-3.5 py-2 text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors flex items-center gap-2 cursor-pointer"
+              className={menuItemClass}
             >
-              <FiEye className="w-3.5 h-3.5 shrink-0 opacity-70" />
-              <span>View details</span>
+              <FiEye className="size-3.5 shrink-0" />
+              View invoice
             </button>
             <button
+              role="menuitem"
               onClick={() => navigate(`/invoices/${selectedMenuInvoice.id}/edit`)}
-              className="w-full text-left px-3.5 py-2 text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors flex items-center gap-2 cursor-pointer"
+              className={menuItemClass}
             >
-              <FiEdit2 className="w-3.5 h-3.5 shrink-0 opacity-70" />
-              <span>Edit layout</span>
+              <FiEdit2 className="size-3.5 shrink-0" />
+              Edit invoice
             </button>
+            <div className="my-1 border-t border-line" />
             <button
+              role="menuitem"
               onClick={(e) => {
                 e.stopPropagation();
                 setInvoiceToDelete(selectedMenuInvoice);
-                setActiveMenuId(null);
-                setMenuPosition(null);
+                closeMenus();
               }}
-              className="w-full text-left px-3.5 py-2 text-xs font-semibold text-red-650 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors flex items-center gap-2 cursor-pointer"
+              className={`${menuItemClass} text-danger! hover:bg-danger-bg! focus-visible:bg-danger-bg!`}
             >
-              <FiTrash2 className="w-3.5 h-3.5 shrink-0 opacity-70" />
-              <span>Delete invoice</span>
+              <FiTrash2 className="size-3.5 shrink-0" />
+              Delete invoice
             </button>
           </div>
         </>
       )}
 
-      {/* Dynamic Status Changer Dropdown (Fixed positioned viewport portal) */}
+      {/* Status Changer (fixed to the viewport) */}
       {activeStatusSelectorId && selectedStatusInvoice && statusSelectorPosition && (
         <>
+          <div className="fixed inset-0 z-30" onClick={closeMenus} />
           <div
-            className="fixed inset-0 z-30"
-            onClick={() => {
-              setActiveStatusSelectorId(null);
-              setStatusSelectorPosition(null);
-            }}
-          />
-          <div
-            style={{
-              position: "fixed",
-              top: `${statusSelectorPosition.top + 4}px`,
-              right: `${statusSelectorPosition.right}px`,
-            }}
-            className="w-32 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-lg py-1.5 z-40 animate-fade-in"
+            role="menu"
+            aria-label="Change status"
+            style={{ top: `${statusSelectorPosition.top + 4}px`, right: `${statusSelectorPosition.right}px` }}
+            className={`${floatingLayerClass} w-36`}
           >
-            {(["draft", "sent", "paid"] as const).map((status) => (
-              <button
-                key={status}
-                disabled={submitting}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleStatusChange(selectedStatusInvoice.id, status);
-                }}
-                className={`w-full text-left px-3.5 py-2 text-xs font-semibold transition-colors flex items-center justify-between cursor-pointer disabled:opacity-50 ${
-                  selectedStatusInvoice.status === status
-                    ? "bg-zinc-50 text-zinc-900 dark:bg-zinc-900 dark:text-zinc-50"
-                    : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-900/50"
-                }`}
-              >
-                <span className="capitalize">{status}</span>
-                {selectedStatusInvoice.status === status && (
-                  <FiCheckCircle className="w-3.5 h-3.5 text-zinc-900 dark:text-zinc-50" />
-                )}
-              </button>
-            ))}
+            {STATUSES.map((status, i) => {
+              const current = selectedStatusInvoice.status === status;
+              return (
+                <button
+                  key={status}
+                  role="menuitemradio"
+                  aria-checked={current}
+                  autoFocus={i === 0}
+                  disabled={submitting}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (current) closeMenus();
+                    else handleStatusChange(selectedStatusInvoice.id, status);
+                  }}
+                  className={`${menuItemClass} capitalize ${current ? "text-fg!" : ""}`}
+                >
+                  <StatusDot status={status} />
+                  <span className="flex-1">{status}</span>
+                  {current && <FiCheck className="size-3.5 text-fg" />}
+                </button>
+              );
+            })}
           </div>
         </>
       )}
 
-      {/* Deletion Confirmation Modal */}
+      {/* Deletion Confirmation */}
       {invoiceToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="fixed inset-0 bg-zinc-950/40 backdrop-blur-xs transition-opacity animate-fade-in"
-            onClick={() => {
-              if (!submitting) setInvoiceToDelete(null);
-            }}
-          />
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-md shadow-xl overflow-hidden z-10 transform transition-all animate-scale-in">
-            <div className="p-6 text-center">
-              <div className="w-12 h-12 bg-red-50 dark:bg-red-950/20 border border-red-100/50 dark:border-red-900/30 rounded-xl flex items-center justify-center text-red-600 dark:text-red-450 mx-auto mb-4 shadow-xs">
-                <FiTrash2 className="w-5 h-5" />
-              </div>
-              <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-50 mb-2">
-                Delete Invoice?
-              </h3>
-              <p className="text-zinc-500 dark:text-zinc-400 text-sm leading-relaxed mb-6">
-                Are you sure you want to delete invoice{" "}
-                <span className="font-semibold text-zinc-900 dark:text-zinc-100">
-                  "{invoiceToDelete.invoice_number}"
-                </span>
-                ? This action will permanently remove it and all of its line items.
-              </p>
+        <Dialog
+          open
+          onClose={() => setInvoiceToDelete(null)}
+          dismissible={!submitting}
+          role="alertdialog"
+          labelledBy="delete-invoice-title"
+          describedBy="delete-invoice-body"
+        >
+          <div className="p-6">
+            <h2 id="delete-invoice-title" className="text-lg font-semibold tracking-[-0.02em] text-fg">
+              Delete{" "}
+              <span className="font-mono">{invoiceToDelete.invoice_number || "this invoice"}</span>?
+            </h2>
+            <p id="delete-invoice-body" className="mt-2 text-sm text-fg-muted leading-relaxed">
+              This permanently removes the invoice and all of its line items. It can't be undone.
+            </p>
 
-              {/* Modal Actions */}
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  disabled={submitting}
-                  onClick={() => setInvoiceToDelete(null)}
-                  className="flex-1 px-4.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 text-sm font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-all cursor-pointer disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  disabled={submitting}
-                  onClick={handleDeleteInvoice}
-                  className="flex-1 bg-red-600 hover:bg-red-500 active:bg-red-700 text-white rounded-xl px-4.5 py-2.5 text-sm font-semibold transition-all shadow-xs active:scale-[0.98] cursor-pointer flex items-center justify-center disabled:opacity-50"
-                >
-                  {submitting ? (
-                    <>
-                      <FiLoader className="animate-spin -ml-1 mr-2.5 h-4 w-4" />
-                      Deleting...
-                    </>
-                  ) : (
-                    "Delete"
-                  )}
-                </button>
-              </div>
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                type="button"
+                autoFocus
+                disabled={submitting}
+                onClick={() => setInvoiceToDelete(null)}
+                className="rounded-md px-3.5 py-2 text-sm font-medium text-fg-muted hover:text-fg hover:bg-surface transition-colors cursor-pointer disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-fg-muted"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={handleDeleteInvoice}
+                className="inline-flex items-center justify-center gap-2 rounded-md bg-danger px-3.5 py-2 text-sm font-medium text-canvas transition hover:opacity-90 active:scale-[0.98] cursor-pointer disabled:opacity-60 disabled:cursor-wait focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger"
+              >
+                {submitting && <FiLoader className="size-4 animate-spin" />}
+                {submitting ? "Deleting" : "Delete invoice"}
+              </button>
             </div>
           </div>
-        </div>
+        </Dialog>
       )}
     </main>
   );

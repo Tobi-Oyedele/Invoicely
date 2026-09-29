@@ -12,7 +12,7 @@ const Home = () => {
   }, []);
 
   return (
-    <div className="min-h-screen text-zinc-900 dark:text-zinc-50 font-sans antialiased selection:bg-zinc-100 dark:selection:bg-zinc-800 transition-colors">
+    <div className="min-h-screen text-fg bg-canvas font-sans antialiased selection:bg-line-strong">
       <Navbar />
       <Hero />
       <Features />

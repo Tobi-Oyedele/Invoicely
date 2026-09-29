@@ -6,7 +6,12 @@
 export const formatDate = (dateString?: string): string => {
   if (!dateString) return "";
   try {
-    const date = new Date(dateString);
+    // Date-only strings parse as UTC midnight, which shows the previous day
+    // west of UTC. Build them as local dates instead.
+    const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateString);
+    const date = dateOnly
+      ? new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]))
+      : new Date(dateString);
     if (isNaN(date.getTime())) return dateString;
 
     const day = date.getDate();

@@ -1,21 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import {
-  FiArrowLeft,
-  FiEdit,
-  FiDownload,
-  FiLoader,
   FiAlertCircle,
-  FiCalendar,
-  FiUser,
-  FiMapPin,
-  FiMail,
-  FiPhone,
-  FiBriefcase,
-  FiSave,
-  FiX,
-  FiCheckCircle,
+  FiArrowLeft,
+  FiCheck,
+  FiDownload,
+  FiEdit2,
+  FiLoader,
+  FiRefreshCw,
 } from "react-icons/fi";
 import { pdf } from "@react-pdf/renderer";
 import { InvoicePDFDocument } from "../../components/invoices/InvoicePDFDocument";
@@ -27,30 +20,55 @@ import type {
 } from "../../components/invoices/InvoicePDFDocument";
 import { LineItemsSection } from "../../components/invoices/LineItemsSection";
 import { InvoicePaymentInstructions } from "../../components/invoices/InvoicePaymentInstructions";
+import { StatusMarker } from "../../components/invoices/status";
 import { CURRENCIES, DEFAULT_CURRENCY } from "../../lib/currency";
+import { formatDate } from "../../utils/date";
+import { AuthField } from "../../components/auth/AuthField";
+import { FormAlert } from "../../components/auth/FormAlert";
+import { FormSection, Optional } from "../../components/ui/FormSection";
+import { SelectField } from "../../components/ui/SelectField";
 
 interface ViewInvoicePageProps {
   defaultEditing?: boolean;
   idOverride?: string;
 }
 
+// Figures only; the currency code sits beside them so columns align
+const formatAmount = (amount: number) =>
+  new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+
+const lineTotal = (item: LineItem) => (item.quantity || 0) * (item.rate || 0);
+
+const paperLabel = "text-[11px] font-medium text-paper-muted";
+
 const ViewInvoicePage = ({ defaultEditing = false, idOverride }: ViewInvoicePageProps) => {
   const { id: paramId } = useParams<{ id: string }>();
   const id = idOverride || paramId;
+  const navigate = useNavigate();
 
   // Loading and edit toggles
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [notFound, setNotFound] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [isEditing, setIsEditing] = useState(defaultEditing);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+  const [justSaved, setJustSaved] = useState(false);
+  const [clientError, setClientError] = useState<string | null>(null);
+  const [dueDateError, setDueDateError] = useState<string | null>(null);
+  const [showItemErrors, setShowItemErrors] = useState(false);
 
   // Loaded database schemas
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [sender, setSender] = useState<Profile | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
 
-  // Form states (prefilled on mount/edit mode toggle)
+  // Form states (prefilled on load and reset on cancel)
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [issueDate, setIssueDate] = useState("");
   const [dueDate, setDueDate] = useState("");
@@ -59,14 +77,26 @@ const ViewInvoicePage = ({ defaultEditing = false, idOverride }: ViewInvoicePage
   const [currency, setCurrency] = useState(DEFAULT_CURRENCY);
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
 
-  const fetchInvoiceDetails = useCallback(async () => {
+  const fillForm = (inv: Invoice) => {
+    setInvoiceNumber(inv.invoice_number || "");
+    setIssueDate(inv.issue_date || "");
+    setDueDate(inv.due_date || "");
+    setSelectedClientId(inv.client_id || "");
+    setNotes(inv.notes || "");
+    setLineItems(inv.line_items || []);
+    setCurrency(inv.currency || DEFAULT_CURRENCY);
+  };
+
+  /** `quiet` refreshes after a save without swapping the page for a skeleton. */
+  const fetchInvoiceDetails = useCallback(async (quiet = false) => {
     if (!id) return;
 
     try {
-      setLoading(true);
-      setErrorMsg(null);
+      if (!quiet) setLoading(true);
+      setLoadError(null);
+      setNotFound(false);
 
-      // 1. Fetch invoice row with client name and line items
+      // 1. Fetch invoice row with client and line items
       const { data: invData, error: invError } = await supabase
         .from("invoices")
         .select(`
@@ -78,18 +108,13 @@ const ViewInvoicePage = ({ defaultEditing = false, idOverride }: ViewInvoicePage
         .maybeSingle();
 
       if (invError) throw invError;
-      if (!invData) throw new Error("Invoice record not found.");
+      if (!invData) {
+        setNotFound(true);
+        return;
+      }
 
       setInvoice(invData);
-
-      // Prefill form states
-      setInvoiceNumber(invData.invoice_number || "");
-      setIssueDate(invData.issue_date || "");
-      setDueDate(invData.due_date || "");
-      setSelectedClientId(invData.client_id || "");
-      setNotes(invData.notes || "");
-      setLineItems(invData.line_items || []);
-      setCurrency(invData.currency || DEFAULT_CURRENCY);
+      fillForm(invData);
 
       // 2. Fetch sender profile details (using invoice.user_id)
       const { data: profileData, error: profileError } = await supabase
@@ -99,9 +124,12 @@ const ViewInvoicePage = ({ defaultEditing = false, idOverride }: ViewInvoicePage
         .maybeSingle();
 
       if (profileError) throw profileError;
+      if (!profileData) {
+        throw new Error("Your profile couldn't be found. Add your details in Profile, then try again.");
+      }
       setSender(profileData);
 
-      // 3. Fetch user's clients list (needed if they toggle to edit mode)
+      // 3. Fetch user's clients list (needed for edit mode)
       const { data: clientsData, error: clientsError } = await supabase
         .from("clients")
         .select("id, client_name")
@@ -113,7 +141,7 @@ const ViewInvoicePage = ({ defaultEditing = false, idOverride }: ViewInvoicePage
     } catch (err) {
       const error = err as Error;
       console.error("Error loading invoice details:", error);
-      setErrorMsg(error.message || "Failed to load invoice layout.");
+      setLoadError(error.message || "We couldn't load this invoice.");
     } finally {
       setLoading(false);
     }
@@ -141,11 +169,11 @@ const ViewInvoicePage = ({ defaultEditing = false, idOverride }: ViewInvoicePage
   }, [invoice?.invoice_number]);
 
   useEffect(() => {
-    if (successMsg) {
-      const timer = setTimeout(() => setSuccessMsg(null), 5000);
+    if (justSaved) {
+      const timer = setTimeout(() => setJustSaved(false), 4000);
       return () => clearTimeout(timer);
     }
-  }, [successMsg]);
+  }, [justSaved]);
 
   // Edit Mode Line Item manipulations
   const handleLineItemChange = (index: number, field: keyof LineItem, value: string | number) => {
@@ -169,37 +197,48 @@ const ViewInvoicePage = ({ defaultEditing = false, idOverride }: ViewInvoicePage
     setLineItems((prev) => prev.filter((_, idx) => idx !== index));
   };
 
-
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: currency || DEFAULT_CURRENCY,
-      minimumFractionDigits: 2,
-    }).format(amount);
+  const leaveEditMode = () => {
+    setIsEditing(false);
+    setErrorMsg(null);
+    setClientError(null);
+    setDueDateError(null);
+    setShowItemErrors(false);
+    // Opened from the /edit route: return to the invoice's own address
+    if (defaultEditing) navigate(`/invoices/${id}`, { replace: true });
   };
 
-  // Submit layout updates
+  // Discard every edit, not only line items
+  const cancelEditing = () => {
+    if (invoice) fillForm(invoice);
+    leaveEditMode();
+  };
+
+  // Submit updates
   const handleSaveChanges = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!id || !invoice) return;
+    setErrorMsg(null);
 
-    if (!selectedClientId) {
-      setErrorMsg("Please select a client for this invoice.");
-      return;
-    }
-    if (!invoiceNumber.trim()) {
-      setErrorMsg("Please specify an invoice number.");
-      return;
-    }
-    if (lineItems.some((item) => !item.description.trim() || item.rate < 0 || item.quantity <= 0)) {
-      setErrorMsg("Please ensure all line items have descriptions, valid quantity, and rate.");
+    const itemsInvalid = lineItems.some(
+      (item) => !item.description.trim() || !(item.quantity > 0) || item.rate < 0,
+    );
+    const dueBeforeIssue = Boolean(dueDate && issueDate && dueDate < issueDate);
+
+    setClientError(selectedClientId ? null : "Choose who this invoice is for.");
+    setDueDateError(dueBeforeIssue ? "The due date can't be before the issue date." : null);
+    setShowItemErrors(itemsInvalid);
+
+    if (!selectedClientId || dueBeforeIssue || itemsInvalid) {
+      setErrorMsg(
+        itemsInvalid
+          ? "Every line item needs a description and a quantity above zero."
+          : "Fix the highlighted fields to save your changes.",
+      );
       return;
     }
 
     try {
       setSubmitting(true);
-      setErrorMsg(null);
 
       // 1. Update parent invoice metadata details
       const { error: invoiceError } = await supabase
@@ -210,7 +249,6 @@ const ViewInvoicePage = ({ defaultEditing = false, idOverride }: ViewInvoicePage
           issue_date: issueDate,
           due_date: dueDate || null,
           notes: notes.trim() || null,
-          currency,
         })
         .eq("id", id);
 
@@ -255,14 +293,13 @@ const ViewInvoicePage = ({ defaultEditing = false, idOverride }: ViewInvoicePage
         }
       }
 
-      // Reset layout views and reload DB sync
-      setSuccessMsg("Invoice details updated successfully.");
-      setIsEditing(false);
-      fetchInvoiceDetails();
+      await fetchInvoiceDetails(true);
+      leaveEditMode();
+      setJustSaved(true);
     } catch (err) {
       const error = err as Error;
       console.error("Error saving changes:", error);
-      setErrorMsg(error.message || "An unexpected error occurred while saving updates.");
+      setErrorMsg(error.message || "Your changes weren't saved. Try again.");
     } finally {
       setSubmitting(false);
     }
@@ -273,7 +310,8 @@ const ViewInvoicePage = ({ defaultEditing = false, idOverride }: ViewInvoicePage
     if (!invoice || !sender) return;
 
     try {
-      setSubmitting(true);
+      setDownloading(true);
+      setDownloadError(null);
       // Compile react-pdf template client-side
       const blob = await pdf(<InvoicePDFDocument invoice={invoice} sender={sender} />).toBlob();
       const url = URL.createObjectURL(blob);
@@ -285,537 +323,418 @@ const ViewInvoicePage = ({ defaultEditing = false, idOverride }: ViewInvoicePage
     } catch (err) {
       const error = err as Error;
       console.error("Error generating PDF:", error);
-      alert(error.message || "Failed to compile PDF. Please try again.");
+      setDownloadError(error.message || "The PDF couldn't be built. Try again.");
     } finally {
-      setSubmitting(false);
+      setDownloading(false);
     }
   };
 
-  const getStatusBadgeStyles = (status: "draft" | "sent" | "paid") => {
-    switch (status) {
-      case "paid":
-        return "bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400 border-green-200/50 dark:border-green-900/30";
-      case "sent":
-        return "bg-blue-50 text-blue-700 dark:bg-blue-950/20 dark:text-blue-400 border-blue-200/50 dark:border-blue-900/30";
-      default:
-        return "bg-zinc-100 text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800";
-    }
-  };
+  const backLink = (
+    <Link
+      to="/invoices"
+      className="mb-6 inline-flex items-center gap-1.5 text-sm text-fg-muted transition-colors hover:text-fg"
+    >
+      <FiArrowLeft className="size-4" />
+      Invoices
+    </Link>
+  );
 
   if (loading) {
     return (
-      <main className="py-6 px-4 lg:py-10 lg:px-8 max-w-4xl mx-auto animate-pulse">
-        <div className="mb-8">
-          <div className="h-4 w-24 bg-zinc-200 dark:bg-zinc-800 rounded-md"></div>
-          <div className="h-8 w-48 bg-zinc-200 dark:bg-zinc-800 rounded-md mt-4"></div>
-        </div>
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 lg:p-8 space-y-6">
-          <div className="h-32 bg-zinc-50 dark:bg-zinc-950 rounded-xl"></div>
-          <div className="h-40 bg-zinc-100 dark:bg-zinc-950 rounded-lg"></div>
-        </div>
-      </main>
-    );
-  }
-
-  if (!invoice || !sender) {
-    return (
-      <main className="py-10 px-6 max-w-4xl mx-auto text-center">
-        <FiAlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-        <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-50 mb-2">Invoice Not Found</h2>
-        <p className="text-zinc-500 dark:text-zinc-400 text-sm mb-6">
-          The requested invoice record could not be found or has been deleted.
-        </p>
-        <Link
-          to="/invoices"
-          className="inline-flex items-center gap-2 text-sm font-semibold text-zinc-900 dark:text-zinc-100 hover:underline"
-        >
-          <FiArrowLeft className="w-4 h-4" />
-          <span>Back to Invoices</span>
-        </Link>
-      </main>
-    );
-  }
-
-  return (
-    <main className="py-6 px-4 lg:py-10 lg:px-8 max-w-4xl mx-auto selection:bg-zinc-100 dark:selection:bg-zinc-800 transition-all">
-      {/* Back and Status banner */}
-      <div className="flex items-center justify-between gap-4 mb-6">
-        <Link
-          to="/invoices"
-          className="inline-flex items-center gap-2 text-xs font-semibold text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors"
-        >
-          <FiArrowLeft className="w-4 h-4" />
-          <span>Back to Invoices</span>
-        </Link>
-
-        {successMsg && (
-          <div className="px-4 py-2 bg-green-50 dark:bg-green-950/15 border border-green-200/50 dark:border-green-900/30 rounded-xl flex items-center gap-2 text-xs text-green-700 dark:text-green-400 font-medium animate-fade-in select-none">
-            <FiCheckCircle className="w-4 h-4 shrink-0" />
-            <span>{successMsg}</span>
-          </div>
-        )}
-        {errorMsg && (
-          <div className="px-4 py-2 bg-red-50 dark:bg-red-950/15 border border-red-200/50 dark:border-red-900/30 rounded-xl flex items-center gap-2 text-xs text-red-600 dark:text-red-400 font-medium animate-fade-in">
-            <FiAlertCircle className="w-4 h-4 shrink-0" />
-            <span>{errorMsg}</span>
-          </div>
-        )}
-      </div>
-
-      {/* Invoice Actions Header */}
-      {!isEditing && (
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
-                {invoice.invoice_number}
-              </h1>
-              <span
-                className={`inline-flex items-center justify-center border rounded-full px-2.5 py-0.5 text-xs font-bold capitalize select-none ${getStatusBadgeStyles(
-                  invoice.status
-                )}`}
-              >
-                {invoice.status}
-              </span>
+      <main aria-busy="true" className="py-6 px-4 lg:py-10 lg:px-8 max-w-4xl mx-auto">
+        {backLink}
+        <div className="motion-safe:animate-pulse">
+          <div className="mb-8 flex items-end justify-between gap-4">
+            <div className="space-y-2">
+              <div className="h-7 w-36 rounded bg-line" />
+              <div className="h-3.5 w-28 rounded bg-line" />
             </div>
-            <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-              Drafted on {new Date(invoice.created_at).toLocaleDateString("en-NG", { day: "numeric", month: "long", year: "numeric" })}
-            </p>
+            <div className="h-10 w-40 rounded-md bg-line" />
           </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setIsEditing(true)}
-              disabled={submitting}
-              className="inline-flex items-center justify-center gap-2 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-900 text-zinc-800 dark:text-zinc-200 rounded-xl px-4.5 py-2.5 text-sm font-semibold transition-all cursor-pointer disabled:opacity-50 select-none shadow-xs hover:shadow-sm"
-            >
-              <FiEdit className="w-4 h-4 shrink-0" />
-              <span>Edit Invoice</span>
-            </button>
-            <button
-              onClick={handleDownloadPDF}
-              disabled={submitting}
-              className="inline-flex items-center justify-center gap-2 bg-zinc-900 hover:bg-zinc-800 active:bg-zinc-950 text-white dark:bg-zinc-100 dark:hover:bg-zinc-200 dark:active:bg-zinc-300 dark:text-zinc-950 rounded-xl px-5 py-2.5 text-sm font-semibold transition-all shadow-xs hover:shadow-md active:scale-[0.98] cursor-pointer shrink-0 disabled:opacity-50"
-            >
-              {submitting ? (
-                <>
-                  <FiLoader className="animate-spin w-4 h-4 shrink-0" />
-                  <span>Compiling PDF...</span>
-                </>
-              ) : (
-                <>
-                  <FiDownload className="w-4 h-4 shrink-0" />
-                  <span>Download PDF</span>
-                </>
-              )}
-            </button>
-          </div>
+          <div className="h-[28rem] rounded-md bg-line/60" />
         </div>
-      )}
+      </main>
+    );
+  }
 
-      {/* Core Component Views */}
-      {isEditing ? (
-        // EDIT MODE COMPOSER FORM
-        <form onSubmit={handleSaveChanges} className="space-y-8">
-          <div className="flex items-center justify-between gap-4 mb-4">
-            <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-50">Edit Invoice Layout</h2>
+  if (notFound || loadError || !invoice || !sender) {
+    return (
+      <main className="py-6 px-4 lg:py-10 lg:px-8 max-w-4xl mx-auto">
+        {backLink}
+        <div className="max-w-md border-t border-fg pt-5">
+          <h2 className="font-medium text-fg">
+            {notFound ? "This invoice doesn't exist" : "We couldn't load this invoice"}
+          </h2>
+          <p className="mt-1.5 text-sm text-fg-muted leading-relaxed">
+            {notFound
+              ? "It may have been deleted, or the link is wrong."
+              : loadError}
+          </p>
+          {notFound ? (
+            <Link
+              to="/invoices"
+              className="mt-5 inline-flex items-center gap-2 rounded-md border border-line-strong px-3.5 py-2 text-sm font-medium text-fg hover:border-fg-subtle hover:bg-surface transition-colors"
+            >
+              See all invoices
+            </Link>
+          ) : (
             <button
               type="button"
-              disabled={submitting}
-              onClick={() => {
-                setIsEditing(false);
-                setErrorMsg(null);
-                // Reset form values back to original
-                setInvoiceNumber(invoice.invoice_number || "");
-                setIssueDate(invoice.issue_date || "");
-                setDueDate(invoice.due_date || "");
-                setSelectedClientId(invoice.client_id || "");
-                setNotes(invoice.notes || "");
-                setLineItems(invoice.line_items || []);
-                setCurrency(invoice.currency || DEFAULT_CURRENCY);
-              }}
-              className="inline-flex items-center justify-center p-1.5 text-zinc-400 hover:text-zinc-700 dark:text-zinc-500 dark:hover:text-zinc-200 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-950 transition-colors cursor-pointer disabled:opacity-50"
+              onClick={() => fetchInvoiceDetails()}
+              className="mt-5 inline-flex items-center gap-2 rounded-md border border-line-strong px-3.5 py-2 text-sm font-medium text-fg hover:border-fg-subtle hover:bg-surface transition-colors cursor-pointer"
             >
-              <FiX className="w-5 h-5 shrink-0" />
+              <FiRefreshCw className="size-3.5" />
+              Try again
             </button>
-          </div>
+          )}
+        </div>
+      </main>
+    );
+  }
 
-          {/* Form Card 1: Sender & Client Details */}
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xs p-6 lg:p-8 space-y-6">
-            <div>
-              <h3 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-4 border-b border-zinc-100 dark:border-zinc-800 pb-2 flex items-center gap-2">
-                <FiBriefcase className="w-3.5 h-3.5" />
-                <span>Sender Details</span>
-              </h3>
-              <div className="p-4 bg-zinc-50/50 dark:bg-zinc-950/30 rounded-xl border border-zinc-100 dark:border-zinc-900/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4 select-none">
-                <div>
-                  <h4 className="font-bold text-sm text-zinc-900 dark:text-zinc-100">
-                    {sender.business_name || `${sender.first_name || ""} ${sender.last_name || ""}`.trim() || "Your Business"}
-                  </h4>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                    {sender.email} • {sender.city || "No city set"}, {sender.country || "No country set"}
-                  </p>
-                </div>
+  const senderPerson = `${sender.first_name || ""} ${sender.last_name || ""}`.trim();
+  const senderName = sender.business_name || senderPerson || "Your business";
+  const senderPlace = [sender.city, sender.country].filter(Boolean).join(", ");
+
+  // EDIT MODE
+  if (isEditing) {
+    return (
+      <main className="pt-6 px-4 lg:pt-10 lg:px-8 max-w-4xl mx-auto text-fg selection:bg-line-strong">
+        {backLink}
+        <div className="mb-8">
+          <h1 className="text-2xl lg:text-3xl font-semibold tracking-[-0.03em] text-fg">
+            Edit <span className="font-mono">{invoice.invoice_number}</span>
+          </h1>
+        </div>
+
+        <form onSubmit={handleSaveChanges} noValidate>
+          <div className="space-y-8 pb-8">
+            <FormSection
+              title="From"
+              aside={
+                <Link to="/profile" className="text-sm text-fg-muted transition-colors hover:text-fg">
+                  Edit profile
+                </Link>
+              }
+            >
+              <div>
+                <p className="font-medium text-fg">{senderName}</p>
+                <p className="mt-0.5 text-sm text-fg-muted break-words">
+                  {sender.email}
+                  {senderPlace && <span className="text-fg-subtle"> · {senderPlace}</span>}
+                </p>
               </div>
-            </div>
+            </FormSection>
 
-            <div className="pt-2">
-              <h3 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-4 border-b border-zinc-100 dark:border-zinc-800 pb-2 flex items-center gap-2">
-                <FiUser className="w-3.5 h-3.5" />
-                <span>Billing Client</span>
-              </h3>
-              <div className="max-w-md">
-                <label
-                  htmlFor="edit_client_select"
-                  className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider mb-1.5"
-                >
-                  Select Client <span className="text-red-500">*</span>
-                </label>
-                <select
-                  id="edit_client_select"
-                  required
+            <FormSection title="Bill to">
+              <div className="sm:max-w-sm">
+                <SelectField
+                  label="Client"
                   value={selectedClientId}
-                  onChange={(e) => setSelectedClientId(e.target.value)}
-                  className="block w-full px-3.5 py-2.5 text-sm bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-600 focus:ring-1 focus:ring-zinc-400 dark:focus:ring-zinc-600 transition-all"
+                  error={clientError}
+                  disabled={submitting}
+                  onChange={(e) => {
+                    setSelectedClientId(e.target.value);
+                    if (e.target.value) setClientError(null);
+                  }}
                 >
+                  <option value="" disabled>
+                    Choose a client
+                  </option>
                   {clients.map((client) => (
                     <option key={client.id} value={client.id}>
                       {client.client_name}
                     </option>
                   ))}
-                </select>
+                </SelectField>
               </div>
-            </div>
-          </div>
+            </FormSection>
 
-          {/* Form Card 2: Dates and metadata */}
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xs p-6 lg:p-8 space-y-6">
-            <h3 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-4 border-b border-zinc-100 dark:border-zinc-800 pb-2 flex items-center gap-2">
-              <FiCalendar className="w-3.5 h-3.5" />
-              <span>Invoice Specifications</span>
-            </h3>
+            <FormSection title="Details">
+              <div className="grid gap-5 sm:grid-cols-2 md:grid-cols-4">
+                <div>
+                  <span className="mb-1.5 block text-sm font-medium text-fg">Invoice number</span>
+                  <p className="flex h-[42px] items-center rounded-md border border-line bg-canvas px-3 font-mono text-sm tabular-nums text-fg-muted">
+                    {invoiceNumber}
+                  </p>
+                </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
-              <div>
-                <label
-                  htmlFor="edit_invoice_number"
-                  className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider mb-1.5"
-                >
-                  Invoice Number
-                </label>
-                <input
-                  id="edit_invoice_number"
-                  type="text"
-                  readOnly
-                  disabled={true}
-                  value={invoiceNumber}
-                  className="block w-full px-3.5 py-2.5 text-sm bg-zinc-100 dark:bg-zinc-950/60 text-zinc-500 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 rounded-xl font-semibold cursor-not-allowed select-none"
-                />
-              </div>
+                <div>
+                  <span className="mb-1.5 block text-sm font-medium text-fg">Currency</span>
+                  <p className="flex h-[42px] items-center rounded-md border border-line bg-canvas px-3 font-mono text-sm text-fg-muted">
+                    {currency} ({CURRENCIES.find((c) => c.code === currency)?.symbol ?? currency})
+                  </p>
+                </div>
 
-              <div>
-                <label
-                  htmlFor="edit_currency_select"
-                  className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider mb-1.5"
-                >
-                  Currency <span className="text-red-500">*</span>
-                </label>
-                <select
-                  id="edit_currency_select"
-                  required
-                  disabled={submitting}
-                  value={currency}
-                  onChange={(e) => setCurrency(e.target.value)}
-                  className="block w-full px-3.5 py-2.5 text-sm bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-600 focus:ring-1 focus:ring-zinc-400 dark:focus:ring-zinc-600 transition-all disabled:opacity-50"
-                >
-                  {CURRENCIES.map((c) => (
-                    <option key={c.code} value={c.code}>
-                      {c.symbol} {c.code}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label
-                  htmlFor="edit_issue_date"
-                  className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider mb-1.5"
-                >
-                  Issue Date <span className="text-red-500">*</span>
-                </label>
-                <input
-                  id="edit_issue_date"
+                <AuthField
+                  label="Issue date"
                   type="date"
-                  required
                   disabled={submitting}
                   value={issueDate}
                   onChange={(e) => setIssueDate(e.target.value)}
-                  className="block w-full px-3.5 py-2.5 text-sm bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-600 focus:ring-1 focus:ring-zinc-400 dark:focus:ring-zinc-600 transition-all disabled:opacity-50"
+                  className="tabular-nums"
                 />
-              </div>
 
-              <div>
-                <label
-                  htmlFor="edit_due_date"
-                  className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider mb-1.5"
-                >
-                  Due Date
-                </label>
-                <input
-                  id="edit_due_date"
+                <AuthField
+                  label="Due date"
+                  labelAside={<Optional />}
                   type="date"
+                  min={issueDate || undefined}
                   disabled={submitting}
                   value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                  className="block w-full px-3.5 py-2.5 text-sm bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-600 focus:ring-1 focus:ring-zinc-400 dark:focus:ring-zinc-600 transition-all disabled:opacity-50"
+                  error={dueDateError}
+                  onChange={(e) => {
+                    setDueDate(e.target.value);
+                    setDueDateError(null);
+                  }}
+                  className="tabular-nums"
                 />
               </div>
-            </div>
-          </div>
+            </FormSection>
 
-          {/* Form Card 3: Dynamic line items */}
-          <LineItemsSection
-            lineItems={lineItems}
-            currency={currency}
-            submitting={submitting}
-            onLineItemChange={handleLineItemChange}
-            onAddLineItem={addLineItem}
-            onRemoveLineItem={removeLineItem}
-          />
+            <LineItemsSection
+              lineItems={lineItems}
+              currency={currency}
+              submitting={submitting}
+              showErrors={showItemErrors}
+              onLineItemChange={handleLineItemChange}
+              onAddLineItem={addLineItem}
+              onRemoveLineItem={removeLineItem}
+            />
 
-          {/* Form Card 4: Optional Notes */}
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xs p-6 lg:p-8 space-y-4">
-            <h3 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest border-b border-zinc-100 dark:border-zinc-800 pb-2">
-              Invoice Notes & Terms (Optional)
-            </h3>
-            <div>
+            <FormSection title="Notes & terms" aside={<Optional />}>
               <textarea
                 id="edit_invoice_notes"
+                aria-label="Notes and terms"
                 rows={4}
                 disabled={submitting}
-                placeholder="Notes or terms..."
+                placeholder="e.g. Payment due within 14 days by bank transfer."
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                className="block w-full px-3.5 py-2.5 text-sm bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-600 focus:ring-1 focus:ring-zinc-400 dark:focus:ring-zinc-600 transition-all resize-none disabled:opacity-50"
+                className="block w-full resize-none rounded-md border border-line-strong bg-surface px-3 py-2.5 text-sm text-fg placeholder:text-fg-subtle transition-colors hover:border-fg-subtle focus:border-fg-muted focus:outline-none disabled:opacity-50"
               />
-            </div>
+            </FormSection>
           </div>
 
-          {/* Form actions */}
-          <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800 flex justify-end gap-3">
-            <button
-              type="button"
-              disabled={submitting}
-              onClick={() => {
-                setIsEditing(false);
-                setErrorMsg(null);
-                setLineItems(invoice.line_items || []);
-                setCurrency(invoice.currency || DEFAULT_CURRENCY);
-              }}
-              className="px-5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 text-sm font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-all cursor-pointer select-none"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="bg-zinc-900 hover:bg-zinc-800 active:bg-zinc-950 text-white dark:bg-zinc-100 dark:hover:bg-zinc-200 dark:active:bg-zinc-300 dark:text-zinc-950 rounded-xl px-6 py-2.5 text-sm font-semibold transition-all shadow-xs active:scale-[0.98] cursor-pointer flex items-center justify-center disabled:opacity-50 w-full sm:w-auto"
-            >
-              {submitting ? (
-                <>
-                  <FiLoader className="animate-spin -ml-1 mr-2.5 h-4 w-4" />
-                  Saving updates...
-                </>
-              ) : (
-                <>
-                  <FiSave className="w-4 h-4 shrink-0 mr-2.5" />
-                  <span>Save Changes</span>
-                </>
+          {/* Save bar */}
+          <div className="sticky bottom-0 -mx-4 lg:-mx-8 flex flex-col-reverse gap-3 border-t border-line bg-canvas/85 px-4 py-3 backdrop-blur-md sm:flex-row sm:items-center sm:justify-end lg:px-8">
+            <p aria-live="polite" className="min-h-5 text-sm sm:mr-auto">
+              {errorMsg && (
+                <span role="alert" className="flex items-start gap-1.5 text-danger">
+                  <FiAlertCircle className="mt-0.5 size-4 shrink-0" />
+                  {errorMsg}
+                </span>
               )}
-            </button>
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={cancelEditing}
+                className="flex-1 rounded-md px-3.5 py-2.5 text-sm font-medium text-fg-muted transition-colors hover:bg-surface hover:text-fg cursor-pointer disabled:opacity-50 sm:flex-none"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-md bg-fg px-4 py-2.5 text-sm font-medium text-canvas transition hover:opacity-90 active:scale-[0.98] cursor-pointer disabled:cursor-wait disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg-muted sm:flex-none"
+              >
+                {submitting && <FiLoader className="size-4 animate-spin" />}
+                {submitting ? "Saving" : "Save changes"}
+              </button>
+            </div>
           </div>
         </form>
-      ) : (
-        // READ-ONLY VIEW MODE
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xs p-6 lg:p-8 space-y-8 transition-colors select-text">
-          {/* Section 1: Parties */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 border-b border-zinc-100 dark:border-zinc-800 pb-8 select-none">
-            {/* Sender address */}
-            <div>
-              <h3 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-                <FiBriefcase className="w-3.5 h-3.5" />
-                <span>From</span>
-              </h3>
-              <h4 className="font-bold text-base text-zinc-900 dark:text-zinc-100">
-                {sender.business_name || `${sender.first_name || ""} ${sender.last_name || ""}`.trim() || "Your Business"}
-              </h4>
-              <div className="text-xs text-zinc-500 dark:text-zinc-400 space-y-1.5 mt-2 font-medium">
-                <div className="flex items-center gap-2">
-                  <FiMail className="w-3.5 h-3.5 opacity-60" />
-                  <span>{sender.email}</span>
-                </div>
-                {(sender.city || sender.country) && (
-                  <div className="flex items-center gap-2">
-                    <FiMapPin className="w-3.5 h-3.5 opacity-60" />
-                    <span>{[sender.city, sender.country].filter(Boolean).join(", ")}</span>
-                  </div>
-                )}
-              </div>
-            </div>
+      </main>
+    );
+  }
 
-            {/* Client address */}
-            <div>
-              <h3 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-                <FiUser className="w-3.5 h-3.5" />
-                <span>Billing To</span>
-              </h3>
-              {invoice.clients ? (
-                <div>
-                  <h4 className="font-bold text-base text-zinc-900 dark:text-zinc-100">
-                    {invoice.clients.client_name}
-                  </h4>
-                  <div className="text-xs text-zinc-500 dark:text-zinc-400 space-y-1.5 mt-2 font-medium">
-                    {invoice.clients.email && (
-                      <div className="flex items-center gap-2">
-                        <FiMail className="w-3.5 h-3.5 opacity-60" />
-                        <span>{invoice.clients.email}</span>
-                      </div>
-                    )}
-                    {invoice.clients.phone_number && (
-                      <div className="flex items-center gap-2">
-                        <FiPhone className="w-3.5 h-3.5 opacity-60" />
-                        <span>{invoice.clients.phone_number}</span>
-                      </div>
-                    )}
-                    {invoice.clients.address && (
-                      <div className="flex items-start gap-2">
-                        <FiMapPin className="w-3.5 h-3.5 opacity-60 mt-0.5" />
-                        <span className="leading-relaxed">{invoice.clients.address}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <p className="text-xs text-zinc-400 dark:text-zinc-650 italic">Anonymous Client</p>
-              )}
+  // READ-ONLY VIEW: the invoice as paper, mirroring the PDF
+  const items = invoice.line_items || [];
+  const total = items.reduce((sum, item) => sum + lineTotal(item), 0);
+  const code = invoice.currency || DEFAULT_CURRENCY;
+  const client = invoice.clients;
+
+  return (
+    <main className="py-6 px-4 lg:py-10 lg:px-8 max-w-4xl mx-auto text-fg selection:bg-line-strong">
+      {backLink}
+
+      {/* Header + actions */}
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="font-mono text-2xl lg:text-3xl font-semibold tracking-[-0.03em] text-fg">
+              {invoice.invoice_number}
+            </h1>
+            <StatusMarker status={invoice.status} />
+          </div>
+          <p className="mt-1.5 text-sm text-fg-muted tabular-nums">
+            Created {formatDate(invoice.created_at)}
+          </p>
+        </div>
+
+        <div className="flex flex-col items-stretch gap-2 sm:items-end">
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setIsEditing(true)}
+              disabled={downloading}
+              className="inline-flex flex-1 items-center justify-center gap-2 rounded-md border border-line-strong px-3.5 py-2.5 text-sm font-medium text-fg transition-colors hover:border-fg-subtle hover:bg-surface cursor-pointer disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg-muted sm:flex-none"
+            >
+              <FiEdit2 className="size-3.5" />
+              Edit
+            </button>
+            <button
+              type="button"
+              onClick={handleDownloadPDF}
+              disabled={downloading}
+              className="inline-flex flex-1 items-center justify-center gap-2 rounded-md bg-fg px-4 py-2.5 text-sm font-medium text-canvas transition hover:opacity-90 active:scale-[0.98] cursor-pointer disabled:cursor-wait disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg-muted sm:flex-none"
+            >
+              {downloading ? <FiLoader className="size-4 animate-spin" /> : <FiDownload className="size-4" />}
+              {downloading ? "Building PDF" : "Download PDF"}
+            </button>
+          </div>
+          <p aria-live="polite" className="min-h-5 text-sm">
+            {justSaved && (
+              <span className="inline-flex items-center gap-1.5 text-accent">
+                <FiCheck className="size-4" />
+                Changes saved
+              </span>
+            )}
+          </p>
+        </div>
+      </div>
+
+      <FormAlert kind="error" message={downloadError} />
+
+      {/* Paper */}
+      <article
+        aria-label={`Invoice ${invoice.invoice_number}`}
+        className="rounded-md bg-paper p-6 text-paper-ink shadow-[0_8px_24px_-12px_rgb(0_0_0/0.6)] ring-1 ring-black/5 sm:p-10"
+      >
+        {/* Masthead */}
+        <div className="flex items-start justify-between gap-6">
+          <div className="min-w-0">
+            <p className="text-lg font-semibold tracking-tight break-words">{senderName}</p>
+            {sender.business_name && senderPerson && (
+              <p className="text-sm text-paper-muted">{senderPerson}</p>
+            )}
+          </div>
+          <div className="shrink-0 text-right">
+            <p className="text-lg font-semibold tracking-tight">Invoice</p>
+            <p className="font-mono text-sm tabular-nums text-paper-muted">{invoice.invoice_number}</p>
+          </div>
+        </div>
+
+        {/* Parties */}
+        <div className="mt-8 grid gap-6 border-t border-paper-rule pt-6 sm:grid-cols-2">
+          <div className="min-w-0">
+            <p className={paperLabel}>From</p>
+            <p className="mt-1 font-medium break-words">{senderName}</p>
+            <div className="mt-1 space-y-0.5 text-sm text-paper-muted">
+              <p className="break-words">{sender.email}</p>
+              {senderPlace && <p>{senderPlace}</p>}
             </div>
           </div>
-
-          {/* Section 2: Dates metadata */}
-          <div className="flex flex-wrap gap-8 border-b border-zinc-100 dark:border-zinc-800 pb-6 text-xs font-medium select-none">
-            <div className="space-y-1">
-              <span className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
-                Issue Date
-              </span>
-              <p className="text-zinc-900 dark:text-zinc-100 text-sm font-semibold">{invoice.issue_date || "—"}</p>
-            </div>
-            <div className="space-y-1">
-              <span className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
-                Due Date
-              </span>
-              <p className="text-zinc-900 dark:text-zinc-100 text-sm font-semibold">{invoice.due_date || "—"}</p>
-            </div>
+          <div className="min-w-0">
+            <p className={paperLabel}>Billing To</p>
+            {client ? (
+              <>
+                <p className="mt-1 font-medium break-words">{client.client_name}</p>
+                <div className="mt-1 space-y-0.5 text-sm text-paper-muted">
+                  {client.email && <p className="break-words">{client.email}</p>}
+                  {client.phone_number && <p className="tabular-nums">{client.phone_number}</p>}
+                  {client.address && <p className="whitespace-pre-line break-words">{client.address}</p>}
+                </div>
+              </>
+            ) : (
+              <p className="mt-1 text-sm text-paper-faint">No client</p>
+            )}
           </div>
+        </div>
 
-          {/* Section 3: Product table list */}
+        {/* Dates */}
+        <div className="mt-6 flex flex-wrap gap-x-10 gap-y-4">
           <div>
-            <h3 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-4 flex items-center gap-1.5 select-none">
-              <span>Billing Products</span>
-            </h3>
-
-            {/* Desktop items table */}
-            <div className="hidden sm:block overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-zinc-100 dark:border-zinc-800 text-[10px] font-bold text-zinc-450 uppercase select-none">
-                    <th className="py-3 flex-1">Description</th>
-                    <th className="py-3 w-20 text-center">Qty</th>
-                    <th className="py-3 w-32 text-right">Rate</th>
-                    <th className="py-3 w-32 text-right">Amount</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800 text-sm">
-                  {lineItems.map((item, index) => (
-                    <tr key={index} className="text-zinc-900 dark:text-zinc-100 font-medium">
-                      <td className="py-4 text-zinc-850 dark:text-zinc-200">{item.description}</td>
-                      <td className="py-4 text-center text-zinc-500 dark:text-zinc-400 select-none">
-                        {item.quantity}
-                      </td>
-                      <td className="py-4 text-right text-zinc-500 dark:text-zinc-400">
-                        {formatCurrency(item.rate)}
-                      </td>
-                      <td className="py-4 text-right font-semibold">
-                        {formatCurrency((item.quantity || 0) * (item.rate || 0))}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Mobile items stacked list */}
-            <div className="block sm:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
-              {lineItems.map((item, index) => (
-                <div key={index} className="py-4 flex flex-col gap-2">
-                  <span className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">
-                    {item.description}
-                  </span>
-                  <div className="flex justify-between items-center text-xs text-zinc-500 dark:text-zinc-400">
-                    <span className="select-none">
-                      {item.quantity} × {formatCurrency(item.rate)}
-                    </span>
-                    <span className="font-bold text-zinc-900 dark:text-zinc-50 text-sm">
-                      {formatCurrency((item.quantity || 0) * (item.rate || 0))}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Total summary board */}
-            {(() => {
-              const total = lineItems.reduce(
-                (sum, item) => sum + (item.quantity || 0) * (item.rate || 0),
-                0,
-              );
-
-              return (
-                <div className="mt-6 pt-6 border-t border-zinc-100 dark:border-zinc-800 flex justify-end">
-                  <div className="w-full sm:w-80 space-y-1.5 text-sm select-none">
-                    <div className="flex justify-between items-center text-zinc-500 dark:text-zinc-400">
-                      <span>Subtotal:</span>
-                      <span className="font-medium text-zinc-900 dark:text-zinc-200">
-                        {formatCurrency(total)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center border-t border-zinc-900 dark:border-zinc-100 pt-1.5 text-zinc-900 dark:text-zinc-50">
-                      <span className="font-bold text-sm">Total Due:</span>
-                      <span className="font-black text-base tracking-tight">
-                        {formatCurrency(total)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
+            <p className={paperLabel}>Issue Date</p>
+            <p className="mt-1 text-sm font-medium tabular-nums">
+              {invoice.issue_date ? formatDate(invoice.issue_date) : "—"}
+            </p>
           </div>
+          <div>
+            <p className={paperLabel}>Due Date</p>
+            <p className="mt-1 text-sm font-medium tabular-nums">
+              {invoice.due_date ? formatDate(invoice.due_date) : "—"}
+            </p>
+          </div>
+        </div>
 
-          {/* Section 4: Bank Payment Instructions */}
+        {/* Items (desktop) */}
+        <table className="mt-8 hidden w-full border-collapse text-sm sm:table">
+          <thead>
+            <tr className="border-b border-paper-rule text-left text-[11px] text-paper-muted">
+              <th scope="col" className="pb-2 font-medium">Description</th>
+              <th scope="col" className="w-16 pb-2 text-right font-medium">Qty</th>
+              <th scope="col" className="w-32 pb-2 text-right font-medium">Rate</th>
+              <th scope="col" className="w-36 pb-2 text-right font-medium">Amount</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-paper-rule">
+            {items.map((item, index) => (
+              <tr key={item.id ?? index} className="align-top">
+                <td className="py-3 pr-4 break-words">{item.description}</td>
+                <td className="py-3 text-right font-mono tabular-nums">{item.quantity}</td>
+                <td className="py-3 text-right font-mono tabular-nums text-paper-muted">{formatAmount(item.rate)}</td>
+                <td className="py-3 text-right font-mono tabular-nums">{formatAmount(lineTotal(item))}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        {/* Items (mobile) */}
+        <ul className="mt-8 divide-y divide-paper-rule border-t border-paper-rule sm:hidden">
+          {items.map((item, index) => (
+            <li key={item.id ?? index} className="py-3">
+              <p className="text-sm break-words">{item.description}</p>
+              <div className="mt-1 flex items-baseline justify-between gap-3 font-mono text-sm tabular-nums">
+                <span className="text-paper-muted">
+                  {item.quantity} × {formatAmount(item.rate)}
+                </span>
+                <span>{formatAmount(lineTotal(item))}</span>
+              </div>
+            </li>
+          ))}
+        </ul>
+
+        {/* Totals */}
+        <div className="mt-4 flex justify-end border-t border-paper-rule pt-4 sm:border-t-0 sm:pt-0">
+          <div className="w-full space-y-2 text-sm sm:w-72">
+            <div className="flex items-baseline justify-between text-paper-muted">
+              <span>Subtotal</span>
+              <span className="font-mono tabular-nums">{formatAmount(total)}</span>
+            </div>
+            <div className="flex items-baseline justify-between border-t border-paper-ink pt-2">
+              <span className="font-medium">Total Due</span>
+              <span className="font-mono tabular-nums whitespace-nowrap">
+                <span className="text-lg font-semibold tracking-tight">{formatAmount(total)}</span>{" "}
+                <span className="text-xs text-paper-muted">{code}</span>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Payment + notes */}
+        <div className="mt-10 grid gap-8 border-t border-paper-rule pt-6 sm:grid-cols-2">
           <InvoicePaymentInstructions sender={sender} />
-
-          {/* Section 5: Notes */}
           {invoice.notes && (
-            <div className="pt-6 border-t border-zinc-100 dark:border-zinc-800">
-              <h3 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-2 select-none">
-                Notes & Terms
-              </h3>
-              <p className="text-xs md:text-sm text-zinc-650 dark:text-zinc-400 leading-relaxed whitespace-pre-line">
-                {invoice.notes}
-              </p>
+            <div>
+              <p className={paperLabel}>Notes & Terms</p>
+              <p className="mt-2 text-sm leading-relaxed whitespace-pre-line break-words">{invoice.notes}</p>
             </div>
           )}
         </div>
-      )}
+      </article>
     </main>
   );
 };

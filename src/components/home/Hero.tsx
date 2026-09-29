@@ -1,21 +1,38 @@
 import { Link } from "react-router-dom";
+import { FiArrowRight } from "react-icons/fi";
+import HeroPreview from "./HeroPreview";
+
 const Hero = () => {
   return (
-    <section className="relative overflow-hidden pt-20 pb-16 md:pt-32 md:pb-24">
-      <div className="max-w-7xl mx-auto px-6 text-center">
-        <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50 leading-[1.1] max-w-4xl mx-auto">
-          Creating professional invoices has never been easier
-        </h1>
-        <p className="mt-6 text-lg md:text-xl text-zinc-500 dark:text-zinc-400 max-w-2xl mx-auto leading-relaxed">
-          Generate, download, and manage invoices in minutes.
-        </p>
-        <div className="mt-10 flex flex-col md:flex-row items-center justify-center gap-4">
-          <Link
-            to="/Sign-Up"
-            className="w-full md:w-auto inline-flex items-center justify-center bg-zinc-900 hover:bg-zinc-800 active:bg-zinc-950 dark:bg-zinc-100 dark:hover:bg-zinc-200 dark:active:bg-zinc-300 text-white dark:text-zinc-950 font-medium px-6 py-3 rounded-lg transition-colors shadow-xs"
-          >
-            Get Started for Free
-          </Link>
+    <section className="pt-16 pb-20 md:pt-24 md:pb-28">
+      <div className="max-w-6xl mx-auto px-6">
+        <div className="max-w-2xl">
+          <h1 className="text-4xl md:text-[3.5rem] font-semibold tracking-[-0.035em] leading-[1.05] text-fg">
+            Write the invoice. Download the PDF.
+          </h1>
+          <p className="mt-5 text-base md:text-lg text-fg-muted leading-relaxed max-w-xl">
+            Add line items, pick a currency, and get a clean PDF you can send
+            today. Free for freelancers, with no templates to fight.
+          </p>
+          <div className="mt-8 flex flex-wrap items-center gap-3">
+            <Link
+              to="/sign-up"
+              className="group inline-flex items-center gap-2 bg-fg text-canvas font-medium text-sm px-4 py-2.5 rounded-md hover:opacity-90 active:scale-[0.98] transition"
+            >
+              Create your first invoice
+              <FiArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+            </Link>
+            <Link
+              to="/sign-in"
+              className="text-sm font-medium text-fg-muted hover:text-fg px-3 py-2.5 transition-colors"
+            >
+              Sign in
+            </Link>
+          </div>
+        </div>
+
+        <div className="mt-12 md:mt-16">
+          <HeroPreview />
         </div>
       </div>
     </section>

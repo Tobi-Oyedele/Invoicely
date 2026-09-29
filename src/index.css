@@ -2,20 +2,94 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Semantic surface tokens. Light values here, dark values under .dark.
+   Dark canvas is charcoal, never pure black; text is off-white, never #fff. */
+:root {
+  --canvas: #f6f6f4;
+  --surface: #fcfcfb;
+  --raised: #ffffff;
+  --line: #e4e4e0;
+  --line-strong: #cfcfca;
+  --fg: #1a1a1d;
+  --fg-muted: #5c5c63;
+  --fg-subtle: #85858c;
+  --accent: #2f7d63;
+  --danger: #b3312d;
+  --danger-bg: #fbeceb;
+  /* Native controls (date pickers, selects, scrollbars) follow the theme */
+  color-scheme: light;
+}
+
+.dark {
+  color-scheme: dark;
+  --canvas: #0f0f11;
+  --surface: #151518;
+  --raised: #1b1b1f;
+  --line: #26262b;
+  --line-strong: #37373d;
+  --fg: #e8e8ea;
+  --fg-muted: #a0a0a8;
+  --fg-subtle: #6e6e76;
+  --accent: #6cbf9f;
+  --danger: #f0837f;
+  --danger-bg: #241514;
+}
+
+@theme inline {
+  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, monospace;
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-subtle: var(--fg-subtle);
+  --color-accent: var(--accent);
+  --color-danger: var(--danger);
+  --color-danger-bg: var(--danger-bg);
+  /* Invoice paper: the same in both themes, because an invoice is a printed artifact */
+  --color-paper: #f3f3ef;
+  --color-paper-ink: #1c1c1f;
+  --color-paper-muted: #6b6b70;
+  --color-paper-faint: #9a9aa0;
+  --color-paper-rule: #dcdcd6;
+}
+
 html,
 body {
-  background-color: #ffffff;
-  color: #18181b;
+  background-color: var(--canvas);
+  color: var(--fg);
+  font-family: var(--font-sans);
   transition-property: color, background-color, border-color;
   transition-duration: 200ms;
 }
 
-html.dark,
-html.dark body {
-  background-color: #09090b;
-  color: #fafafa;
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-rise {
+  animation: rise 240ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-rise {
+    animation: none;
+  }
+  * {
+    transition-duration: 0.01ms !important;
+  }
 }
 
 .hamburgerMenuLinkStyles {
-  @apply text-xl font-bold text-zinc-900 dark:text-zinc-50 py-4 border-b border-zinc-100 dark:border-zinc-900 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors;
+  @apply text-xl font-semibold text-fg py-4 border-b border-line hover:text-fg-muted transition-colors;
 }

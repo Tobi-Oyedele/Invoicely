@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { Outlet, Navigate } from "react-router-dom";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "../../lib/supabase";
+import { FiMenu } from "react-icons/fi";
 import Sidebar from "../dashboard/Sidebar";
+import { Logo } from "../brand/Logo";
 
 const DashboardLayout = () => {
   const [session, setSession] = useState<Session | null>(null);
@@ -25,11 +27,21 @@ const DashboardLayout = () => {
     return () => subscription.unsubscribe();
   }, []);
 
+  useEffect(() => {
+    if (!isSidebarOpen) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsSidebarOpen(false);
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [isSidebarOpen]);
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex flex-col items-center justify-center transition-colors">
+      <div className="min-h-screen bg-canvas flex flex-col items-center justify-center transition-colors">
         <svg
-          className="animate-spin h-8 w-8 text-zinc-900 dark:text-zinc-100"
+          className="animate-spin size-6 text-fg-subtle"
+          aria-label="Loading"
           fill="none"
           viewBox="0 0 24 24"
         >
@@ -56,47 +68,36 @@ const DashboardLayout = () => {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 transition-colors flex flex-col md:block">
+    <div className="min-h-screen bg-canvas text-fg selection:bg-line-strong flex flex-col md:block">
       {/* Sticky Mobile Header */}
-      <header className="flex md:hidden items-center justify-between h-16 px-6 bg-white dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 sticky top-0 z-40 transition-colors">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setIsSidebarOpen(true)}
-            className="p-1 -ml-1 text-zinc-500 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-zinc-100 focus:outline-none cursor-pointer"
-            aria-label="Open sidebar"
-          >
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M4 6h16M4 12h16M4 18h16"
-              />
-            </svg>
-          </button>
-          <span className="font-bold tracking-tight text-lg text-zinc-900 dark:text-zinc-50">
-            Invoicely
-          </span>
-        </div>
+      <header className="md:hidden sticky top-0 z-40 flex h-14 items-center justify-between border-b border-line bg-canvas/85 px-4 backdrop-blur-md">
+        <Logo to="/invoices" />
+        <button
+          type="button"
+          onClick={() => setIsSidebarOpen(true)}
+          className="-mr-1.5 flex size-9 items-center justify-center rounded-md text-fg-muted hover:text-fg transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-fg-muted"
+          aria-label="Open menu"
+          aria-expanded={isSidebarOpen}
+          aria-controls="dashboard-sidebar"
+        >
+          <FiMenu className="size-5" />
+        </button>
       </header>
 
       {/* Mobile Drawer Backdrop overlay */}
       {isSidebarOpen && (
         <div
           onClick={() => setIsSidebarOpen(false)}
-          className="md:hidden fixed inset-0 bg-zinc-950/40 backdrop-blur-xs z-40 transition-opacity"
+          className="md:hidden fixed inset-0 z-40 bg-black/40 dark:bg-black/60"
         />
       )}
 
-      {/* Persistent Desktop Sidebar & Sliding Drawer on Mobile */}
+      {/* Persistent Desktop Sidebar & Sliding Drawer on Mobile.
+          Closed on mobile it is also invisible, so its links leave the tab order. */}
       <div
-        className={`fixed inset-y-0 left-0 w-64 bg-white dark:bg-zinc-950 border-r border-zinc-200 dark:border-zinc-800 z-50 transform transition-transform duration-300 md:translate-x-0 md:fixed md:inset-y-0 md:left-0 md:w-64 md:flex md:flex-col ${
-          isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+        id="dashboard-sidebar"
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-line bg-canvas transition-[transform,visibility] duration-300 ease-[cubic-bezier(0.2,0.7,0.2,1)] md:visible md:translate-x-0 ${
+          isSidebarOpen ? "visible translate-x-0" : "invisible -translate-x-full"
         }`}
       >
         <Sidebar onClose={() => setIsSidebarOpen(false)} />

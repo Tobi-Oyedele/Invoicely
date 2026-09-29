@@ -1,31 +1,23 @@
 import { FiEdit2, FiTrash2 } from "react-icons/fi";
-
-interface Client {
-  id: string;
-  user_id: string;
-  client_name: string;
-  email: string;
-  phone_number: string;
-  address: string;
-  created_at: string;
-}
+import type { Client } from "./types";
 
 interface ClientDropdownMenuProps {
   activeMenuId: string | null;
   menuPosition: { top: number; right: number } | null;
   clients: Client[];
-  setActiveMenuId: (id: string | null) => void;
-  setMenuPosition: (pos: { top: number; right: number } | null) => void;
+  onClose: () => void;
   openEditModal: (client: Client) => void;
   openDeleteModal: (client: Client) => void;
 }
+
+const menuItemClass =
+  "w-full flex items-center gap-2.5 px-3 py-2 text-left text-sm text-fg-muted hover:text-fg hover:bg-surface focus-visible:bg-surface focus-visible:text-fg focus-visible:outline-none transition-colors cursor-pointer";
 
 export const ClientDropdownMenu = ({
   activeMenuId,
   menuPosition,
   clients,
-  setActiveMenuId,
-  setMenuPosition,
+  onClose,
   openEditModal,
   openDeleteModal,
 }: ClientDropdownMenuProps) => {
@@ -36,34 +28,30 @@ export const ClientDropdownMenu = ({
 
   return (
     <>
+      <div className="fixed inset-0 z-30" onClick={onClose} />
       <div
-        className="fixed inset-0 z-30"
-        onClick={() => {
-          setActiveMenuId(null);
-          setMenuPosition(null);
-        }}
-      />
-      <div
-        style={{
-          position: "fixed",
-          top: `${menuPosition.top + 4}px`,
-          right: `${menuPosition.right}px`,
-        }}
-        className="w-36 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-lg py-1.5 z-40 animate-fade-in"
+        role="menu"
+        aria-label={`Actions for ${activeMenuClient.client_name}`}
+        style={{ top: `${menuPosition.top + 4}px`, right: `${menuPosition.right}px` }}
+        className="fixed z-40 w-40 rounded-md border border-line bg-raised py-1 shadow-[0_12px_32px_-12px_rgb(0_0_0/0.35)] animate-rise"
       >
         <button
+          role="menuitem"
+          autoFocus
           onClick={() => openEditModal(activeMenuClient)}
-          className="w-full text-left px-3.5 py-2 text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors flex items-center gap-2 cursor-pointer"
+          className={menuItemClass}
         >
-          <FiEdit2 className="w-3.5 h-3.5 shrink-0 opacity-70" />
-          <span>Edit details</span>
+          <FiEdit2 className="size-3.5 shrink-0" />
+          Edit client
         </button>
+        <div className="my-1 border-t border-line" />
         <button
+          role="menuitem"
           onClick={() => openDeleteModal(activeMenuClient)}
-          className="w-full text-left px-3.5 py-2 text-xs font-semibold text-red-600 dark:text-red-455 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors flex items-center gap-2 cursor-pointer"
+          className={`${menuItemClass} text-danger! hover:bg-danger-bg! focus-visible:bg-danger-bg!`}
         >
-          <FiTrash2 className="w-3.5 h-3.5 shrink-0 opacity-70" />
-          <span>Delete client</span>
+          <FiTrash2 className="size-3.5 shrink-0" />
+          Delete client
         </button>
       </div>
     </>

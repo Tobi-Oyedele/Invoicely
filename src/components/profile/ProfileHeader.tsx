@@ -1,4 +1,3 @@
-import { FiCalendar, FiMail } from "react-icons/fi";
 import { formatDate } from "../../utils/date";
 
 interface ProfileHeaderProps {
@@ -14,40 +13,30 @@ export const ProfileHeader = ({
   createdAt,
   email,
 }: ProfileHeaderProps) => {
-  // Generate beautiful avatar initials
-  const getInitials = () => {
-    const first = firstName.trim().charAt(0).toUpperCase();
-    const last = lastName.trim().charAt(0).toUpperCase();
-    return first || last ? `${first}${last}` : "U";
-  };
+  const fullName = `${firstName} ${lastName}`.trim();
+  const initials =
+    `${firstName.trim().charAt(0)}${lastName.trim().charAt(0)}`.toUpperCase() ||
+    email.charAt(0).toUpperCase();
 
   return (
-    <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 p-6 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-100 dark:border-zinc-900/50 transition-all mb-8">
-      <div className="flex items-center gap-4">
-        <div className="w-14 h-14 lg:w-16 lg:h-16 rounded-full bg-linear-to-tr from-zinc-900 to-zinc-600 dark:from-zinc-100 dark:to-zinc-300 text-white dark:text-zinc-950 flex items-center justify-center text-xl font-bold tracking-tight shadow-sm select-none shrink-0">
-          {getInitials()}
-        </div>
-        <div>
-          <h2 className="text-lg lg:text-xl font-extrabold text-zinc-900 dark:text-zinc-50 leading-tight">
-            {firstName || lastName
-              ? `${firstName} ${lastName}`.trim()
-              : "Your Profile"}
-          </h2>
-          <div className="flex items-center gap-1.5 mt-2 text-xs text-zinc-400 dark:text-zinc-500">
-            <FiCalendar className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
-            <span>Joined {formatDate(createdAt)}</span>
-          </div>
-        </div>
+    <div className="flex items-center gap-4 border-y border-line py-5">
+      <div
+        aria-hidden
+        className="flex size-11 shrink-0 select-none items-center justify-center rounded-full border border-line-strong bg-surface text-sm font-medium text-fg-muted"
+      >
+        {initials || "·"}
       </div>
-
-      <div className="w-full lg:w-auto flex flex-col gap-1.5 lg:min-w-64">
-        <span className="block text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">
-          Email Address
-        </span>
-        <div className="bg-zinc-50 dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-900 rounded-lg px-3.5 py-2.5 text-xs lg:text-sm text-zinc-500 dark:text-zinc-400 font-medium break-all select-all flex items-center gap-2">
-          <FiMail className="w-4 h-4 text-zinc-400 shrink-0" />
-          {email || "N/A"}
-        </div>
+      <div className="min-w-0">
+        <p className="truncate font-medium text-fg">{fullName || "Add your name below"}</p>
+        <p className="mt-0.5 flex flex-col text-sm sm:flex-row sm:items-baseline sm:gap-1.5">
+          <span className="truncate text-fg-muted" title={email}>{email}</span>
+          {createdAt && (
+            <span className="shrink-0 text-fg-subtle">
+              <span aria-hidden className="hidden sm:inline">· </span>
+              Joined {formatDate(createdAt)}
+            </span>
+          )}
+        </p>
       </div>
     </div>
   );
