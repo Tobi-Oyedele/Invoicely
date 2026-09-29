@@ -1,0 +1,625 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-28T22:59:29.409622+00:00",
+  "title": "Design System: Invoicely",
+  "extensions": {
+    "colorMeta": {
+      "canvas": {
+        "role": "neutral",
+        "displayName": "Bone Canvas",
+        "tonalRamp": [
+          "oklch(15% 0.003 106)",
+          "oklch(25% 0.003 106)",
+          "oklch(37% 0.003 106)",
+          "oklch(49% 0.003 106)",
+          "oklch(61% 0.003 106)",
+          "oklch(73% 0.003 106)",
+          "oklch(85% 0.003 106)",
+          "oklch(95% 0.003 106)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Surface",
+        "tonalRamp": [
+          "oklch(15% 0.001 106)",
+          "oklch(25% 0.001 106)",
+          "oklch(37% 0.001 106)",
+          "oklch(49% 0.001 106)",
+          "oklch(61% 0.001 106)",
+          "oklch(73% 0.001 106)",
+          "oklch(85% 0.001 106)",
+          "oklch(95% 0.001 106)"
+        ]
+      },
+      "raised": {
+        "role": "neutral",
+        "displayName": "Raised",
+        "tonalRamp": [
+          "oklch(15% 0.000 90)",
+          "oklch(25% 0.000 90)",
+          "oklch(37% 0.000 90)",
+          "oklch(49% 0.000 90)",
+          "oklch(61% 0.000 90)",
+          "oklch(73% 0.000 90)",
+          "oklch(85% 0.000 90)",
+          "oklch(95% 0.000 90)"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "tonalRamp": [
+          "oklch(15% 0.005 107)",
+          "oklch(25% 0.005 107)",
+          "oklch(37% 0.005 107)",
+          "oklch(49% 0.005 107)",
+          "oklch(61% 0.005 107)",
+          "oklch(73% 0.005 107)",
+          "oklch(85% 0.005 107)",
+          "oklch(95% 0.005 107)"
+        ]
+      },
+      "line-strong": {
+        "role": "neutral",
+        "displayName": "Strong Hairline",
+        "tonalRamp": [
+          "oklch(15% 0.007 107)",
+          "oklch(25% 0.007 107)",
+          "oklch(37% 0.007 107)",
+          "oklch(49% 0.007 107)",
+          "oklch(61% 0.007 107)",
+          "oklch(73% 0.007 107)",
+          "oklch(85% 0.007 107)",
+          "oklch(95% 0.007 107)"
+        ]
+      },
+      "fg": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "tonalRamp": [
+          "oklch(15% 0.006 286)",
+          "oklch(25% 0.006 286)",
+          "oklch(37% 0.006 286)",
+          "oklch(49% 0.006 286)",
+          "oklch(61% 0.006 286)",
+          "oklch(73% 0.006 286)",
+          "oklch(85% 0.006 286)",
+          "oklch(95% 0.006 286)"
+        ]
+      },
+      "fg-muted": {
+        "role": "neutral",
+        "displayName": "Muted Ink",
+        "tonalRamp": [
+          "oklch(15% 0.011 286)",
+          "oklch(25% 0.011 286)",
+          "oklch(37% 0.011 286)",
+          "oklch(49% 0.011 286)",
+          "oklch(61% 0.011 286)",
+          "oklch(73% 0.011 286)",
+          "oklch(85% 0.011 286)",
+          "oklch(95% 0.011 286)"
+        ]
+      },
+      "fg-subtle": {
+        "role": "neutral",
+        "displayName": "Faint Ink",
+        "tonalRamp": [
+          "oklch(15% 0.010 286)",
+          "oklch(25% 0.010 286)",
+          "oklch(37% 0.010 286)",
+          "oklch(49% 0.010 286)",
+          "oklch(61% 0.010 286)",
+          "oklch(73% 0.010 286)",
+          "oklch(85% 0.010 286)",
+          "oklch(95% 0.010 286)"
+        ]
+      },
+      "accent": {
+        "role": "primary",
+        "displayName": "Paid Green",
+        "tonalRamp": [
+          "oklch(15% 0.087 168)",
+          "oklch(25% 0.087 168)",
+          "oklch(37% 0.087 168)",
+          "oklch(49% 0.087 168)",
+          "oklch(61% 0.087 168)",
+          "oklch(73% 0.087 168)",
+          "oklch(85% 0.087 168)",
+          "oklch(95% 0.087 168)"
+        ]
+      },
+      "danger": {
+        "role": "semantic",
+        "displayName": "Warning Red",
+        "tonalRamp": [
+          "oklch(15% 0.120 27)",
+          "oklch(25% 0.120 27)",
+          "oklch(37% 0.120 27)",
+          "oklch(49% 0.120 27)",
+          "oklch(61% 0.120 27)",
+          "oklch(73% 0.120 27)",
+          "oklch(85% 0.120 27)",
+          "oklch(95% 0.120 27)"
+        ]
+      },
+      "danger-bg": {
+        "role": "semantic",
+        "displayName": "Warning Wash",
+        "tonalRamp": [
+          "oklch(15% 0.016 22)",
+          "oklch(25% 0.016 22)",
+          "oklch(37% 0.016 22)",
+          "oklch(49% 0.016 22)",
+          "oklch(61% 0.016 22)",
+          "oklch(73% 0.016 22)",
+          "oklch(85% 0.016 22)",
+          "oklch(95% 0.016 22)"
+        ]
+      },
+      "canvas-dark": {
+        "role": "neutral",
+        "displayName": "Charcoal Canvas",
+        "tonalRamp": [
+          "oklch(15% 0.004 286)",
+          "oklch(25% 0.004 286)",
+          "oklch(37% 0.004 286)",
+          "oklch(49% 0.004 286)",
+          "oklch(61% 0.004 286)",
+          "oklch(73% 0.004 286)",
+          "oklch(85% 0.004 286)",
+          "oklch(95% 0.004 286)"
+        ]
+      },
+      "surface-dark": {
+        "role": "neutral",
+        "displayName": "Surface (dark)",
+        "tonalRamp": [
+          "oklch(15% 0.006 286)",
+          "oklch(25% 0.006 286)",
+          "oklch(37% 0.006 286)",
+          "oklch(49% 0.006 286)",
+          "oklch(61% 0.006 286)",
+          "oklch(73% 0.006 286)",
+          "oklch(85% 0.006 286)",
+          "oklch(95% 0.006 286)"
+        ]
+      },
+      "raised-dark": {
+        "role": "neutral",
+        "displayName": "Raised (dark)",
+        "tonalRamp": [
+          "oklch(15% 0.008 286)",
+          "oklch(25% 0.008 286)",
+          "oklch(37% 0.008 286)",
+          "oklch(49% 0.008 286)",
+          "oklch(61% 0.008 286)",
+          "oklch(73% 0.008 286)",
+          "oklch(85% 0.008 286)",
+          "oklch(95% 0.008 286)"
+        ]
+      },
+      "line-dark": {
+        "role": "neutral",
+        "displayName": "Hairline (dark)",
+        "tonalRamp": [
+          "oklch(15% 0.009 286)",
+          "oklch(25% 0.009 286)",
+          "oklch(37% 0.009 286)",
+          "oklch(49% 0.009 286)",
+          "oklch(61% 0.009 286)",
+          "oklch(73% 0.009 286)",
+          "oklch(85% 0.009 286)",
+          "oklch(95% 0.009 286)"
+        ]
+      },
+      "line-strong-dark": {
+        "role": "neutral",
+        "displayName": "Strong Hairline (dark)",
+        "tonalRamp": [
+          "oklch(15% 0.010 286)",
+          "oklch(25% 0.010 286)",
+          "oklch(37% 0.010 286)",
+          "oklch(49% 0.010 286)",
+          "oklch(61% 0.010 286)",
+          "oklch(73% 0.010 286)",
+          "oklch(85% 0.010 286)",
+          "oklch(95% 0.010 286)"
+        ]
+      },
+      "fg-dark": {
+        "role": "neutral",
+        "displayName": "Ink (dark)",
+        "tonalRamp": [
+          "oklch(15% 0.003 286)",
+          "oklch(25% 0.003 286)",
+          "oklch(37% 0.003 286)",
+          "oklch(49% 0.003 286)",
+          "oklch(61% 0.003 286)",
+          "oklch(73% 0.003 286)",
+          "oklch(85% 0.003 286)",
+          "oklch(95% 0.003 286)"
+        ]
+      },
+      "fg-muted-dark": {
+        "role": "neutral",
+        "displayName": "Muted Ink (dark)",
+        "tonalRamp": [
+          "oklch(15% 0.012 286)",
+          "oklch(25% 0.012 286)",
+          "oklch(37% 0.012 286)",
+          "oklch(49% 0.012 286)",
+          "oklch(61% 0.012 286)",
+          "oklch(73% 0.012 286)",
+          "oklch(85% 0.012 286)",
+          "oklch(95% 0.012 286)"
+        ]
+      },
+      "fg-subtle-dark": {
+        "role": "neutral",
+        "displayName": "Faint Ink (dark)",
+        "tonalRamp": [
+          "oklch(15% 0.012 286)",
+          "oklch(25% 0.012 286)",
+          "oklch(37% 0.012 286)",
+          "oklch(49% 0.012 286)",
+          "oklch(61% 0.012 286)",
+          "oklch(73% 0.012 286)",
+          "oklch(85% 0.012 286)",
+          "oklch(95% 0.012 286)"
+        ]
+      },
+      "accent-dark": {
+        "role": "primary",
+        "displayName": "Paid Green (dark)",
+        "tonalRamp": [
+          "oklch(15% 0.095 167)",
+          "oklch(25% 0.095 167)",
+          "oklch(37% 0.095 167)",
+          "oklch(49% 0.095 167)",
+          "oklch(61% 0.095 167)",
+          "oklch(73% 0.095 167)",
+          "oklch(85% 0.095 167)",
+          "oklch(95% 0.095 167)"
+        ]
+      },
+      "danger-dark": {
+        "role": "semantic",
+        "displayName": "Warning Red (dark)",
+        "tonalRamp": [
+          "oklch(15% 0.120 23)",
+          "oklch(25% 0.120 23)",
+          "oklch(37% 0.120 23)",
+          "oklch(49% 0.120 23)",
+          "oklch(61% 0.120 23)",
+          "oklch(73% 0.120 23)",
+          "oklch(85% 0.120 23)",
+          "oklch(95% 0.120 23)"
+        ]
+      },
+      "danger-bg-dark": {
+        "role": "semantic",
+        "displayName": "Warning Wash (dark)",
+        "tonalRamp": [
+          "oklch(15% 0.025 24)",
+          "oklch(25% 0.025 24)",
+          "oklch(37% 0.025 24)",
+          "oklch(49% 0.025 24)",
+          "oklch(61% 0.025 24)",
+          "oklch(73% 0.025 24)",
+          "oklch(85% 0.025 24)",
+          "oklch(95% 0.025 24)"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Paper",
+        "tonalRamp": [
+          "oklch(15% 0.005 106)",
+          "oklch(25% 0.005 106)",
+          "oklch(37% 0.005 106)",
+          "oklch(49% 0.005 106)",
+          "oklch(61% 0.005 106)",
+          "oklch(73% 0.005 106)",
+          "oklch(85% 0.005 106)",
+          "oklch(95% 0.005 106)"
+        ]
+      },
+      "paper-ink": {
+        "role": "neutral",
+        "displayName": "Paper Ink",
+        "tonalRamp": [
+          "oklch(15% 0.006 286)",
+          "oklch(25% 0.006 286)",
+          "oklch(37% 0.006 286)",
+          "oklch(49% 0.006 286)",
+          "oklch(61% 0.006 286)",
+          "oklch(73% 0.006 286)",
+          "oklch(85% 0.006 286)",
+          "oklch(95% 0.006 286)"
+        ]
+      },
+      "paper-muted": {
+        "role": "neutral",
+        "displayName": "Paper Muted",
+        "tonalRamp": [
+          "oklch(15% 0.008 286)",
+          "oklch(25% 0.008 286)",
+          "oklch(37% 0.008 286)",
+          "oklch(49% 0.008 286)",
+          "oklch(61% 0.008 286)",
+          "oklch(73% 0.008 286)",
+          "oklch(85% 0.008 286)",
+          "oklch(95% 0.008 286)"
+        ]
+      },
+      "paper-rule": {
+        "role": "neutral",
+        "displayName": "Paper Rule",
+        "tonalRamp": [
+          "oklch(15% 0.008 107)",
+          "oklch(25% 0.008 107)",
+          "oklch(37% 0.008 107)",
+          "oklch(49% 0.008 107)",
+          "oklch(61% 0.008 107)",
+          "oklch(73% 0.008 107)",
+          "oklch(85% 0.008 107)",
+          "oklch(95% 0.008 107)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Landing hero headline only."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Section headings, auth titles."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "List and step headings."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Default UI and supporting text."
+      },
+      "body-lead": {
+        "displayName": "Body Lead",
+        "purpose": "Hero sub-copy."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Field labels, table headers, captions; sentence case."
+      },
+      "figure": {
+        "displayName": "Figure",
+        "purpose": "Every quantity, rate, amount, total, currency code and invoice number."
+      }
+    },
+    "shadows": [
+      {
+        "name": "panel-highlight",
+        "value": "inset 0 1px 0 0 rgb(255 255 255 / 0.03)",
+        "purpose": "Top-edge sheen on dark panels."
+      },
+      {
+        "name": "paper-lift",
+        "value": "0 8px 24px -12px rgb(0 0 0 / 0.6)",
+        "purpose": "Invoice paper sheet; deepest shadow in the system."
+      },
+      {
+        "name": "ambient-card",
+        "value": "0 1px 2px rgb(0 0 0 / 0.04), 0 4px 16px -8px rgb(0 0 0 / 0.08)",
+        "purpose": "Provisional, unused so far: optional lift for panels and cards."
+      },
+      {
+        "name": "floating-layer",
+        "value": "0 12px 32px -12px rgb(0 0 0 / 0.35)",
+        "purpose": "Row menus, the status menu, and dialogs on raised."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-rise",
+        "value": "cubic-bezier(0.2, 0.7, 0.2, 1)",
+        "purpose": "240ms rise-in for entering content and messages."
+      },
+      {
+        "name": "duration-state",
+        "value": "150ms",
+        "purpose": "Border and colour state transitions on controls."
+      },
+      {
+        "name": "duration-theme",
+        "value": "200ms",
+        "purpose": "Theme switch colour transition on html/body."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Ink-on-canvas main action; inverts per theme.",
+      "html": "<button class=\"ds-btn-primary\">Create your first invoice <svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><line x1=\"5\" y1=\"12\" x2=\"19\" y2=\"12\"/><polyline points=\"12 5 19 12 12 19\"/></svg></button>",
+      "css": ".ds-btn-primary { font-family: var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif); display: inline-flex; align-items: center; gap: 8px; background: var(--fg); color: var(--canvas); font-size: 14px; font-weight: 500; padding: 10px 16px; border: none; border-radius: 6px; cursor: pointer; transition: opacity .15s, transform .15s; } .ds-btn-primary svg { transition: transform .15s; } .ds-btn-primary:hover { opacity: .9; } .ds-btn-primary:hover svg { transform: translateX(2px); } .ds-btn-primary:active { transform: scale(.98); } .ds-btn-primary:focus-visible { outline: 2px solid var(--fg-muted); outline-offset: 2px; }"
+    },
+    {
+      "name": "Ghost Link Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Secondary action beside a primary button.",
+      "html": "<button class=\"ds-btn-ghost\">Sign in</button>",
+      "css": ".ds-btn-ghost { font-family: var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif); background: none; border: none; color: var(--fg-muted); font-size: 14px; font-weight: 500; padding: 10px 12px; cursor: pointer; transition: color .15s; border-radius: 6px; } .ds-btn-ghost:hover { color: var(--fg); } .ds-btn-ghost:focus-visible { outline: 2px solid var(--fg-muted); outline-offset: 2px; }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Labelled field; border shift is the only focus signal.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field-label\">Email</span><input class=\"ds-input\" type=\"email\" placeholder=\"you@studio.com\"></label>",
+      "css": ".ds-field { font-family: var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif); display: block; max-width: 320px; } .ds-field-label { display: block; margin-bottom: 6px; font-size: 14px; font-weight: 500; color: var(--fg); } .ds-input { font-family: var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif); display: block; width: 100%; box-sizing: border-box; background: var(--surface); color: var(--fg); border: 1px solid var(--line-strong); border-radius: 6px; padding: 10px 12px; font-size: 14px; transition: border-color .15s; } .ds-input::placeholder { color: var(--fg-subtle); } .ds-input:hover { border-color: var(--fg-subtle); } .ds-input:focus { outline: none; border-color: var(--fg-muted); }"
+    },
+    {
+      "name": "Currency Segmented Control",
+      "kind": "chip",
+      "refersTo": "segmented-option",
+      "description": "Mono radio group for picking a currency.",
+      "html": "<div class=\"ds-seg\" role=\"radiogroup\" aria-label=\"Currency\"><button class=\"ds-seg-opt\" role=\"radio\" aria-checked=\"false\">NGN</button><button class=\"ds-seg-opt\" role=\"radio\" aria-checked=\"true\">USD</button><button class=\"ds-seg-opt\" role=\"radio\" aria-checked=\"false\">EUR</button><button class=\"ds-seg-opt\" role=\"radio\" aria-checked=\"false\">GBP</button></div>",
+      "css": ".ds-seg { display: inline-flex; padding: 2px; background: var(--canvas); border: 1px solid var(--line-strong); border-radius: 6px; } .ds-seg-opt { font-family: var(--font-mono, 'Geist Mono', ui-monospace, monospace); background: none; border: none; font-size: 12px; padding: 4px 8px; border-radius: 4px; color: var(--fg-subtle); cursor: pointer; transition: color .15s, background .15s; } .ds-seg-opt:hover { color: var(--fg); } .ds-seg-opt[aria-checked=true] { background: var(--raised); color: var(--fg); } .ds-seg-opt:focus-visible { outline: 2px solid var(--fg-muted); outline-offset: 1px; }"
+    },
+    {
+      "name": "Error Alert",
+      "kind": "custom",
+      "refersTo": "alert-error",
+      "description": "Form-level error message.",
+      "html": "<div class=\"ds-alert\" role=\"alert\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><line x1=\"12\" y1=\"8\" x2=\"12\" y2=\"12\"/><line x1=\"12\" y1=\"16\" x2=\"12.01\" y2=\"16\"/></svg><span>That email and password don't match.</span></div>",
+      "css": ".ds-alert { font-family: var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif); display: flex; align-items: flex-start; gap: 10px; max-width: 360px; padding: 10px 12px; font-size: 14px; border-radius: 6px; background: var(--danger-bg); color: var(--danger); border: 1px solid color-mix(in srgb, var(--danger) 40%, transparent); } .ds-alert svg { flex-shrink: 0; margin-top: 2px; }"
+    },
+    {
+      "name": "Top Navigation",
+      "kind": "nav",
+      "refersTo": "button-primary-compact",
+      "description": "Sticky translucent bar with logo, ghost and compact primary.",
+      "html": "<header class=\"ds-nav\"><a class=\"ds-logo\" href=\"#\"><svg class=\"ds-logo-mark\" viewBox=\"0 0 32 32\" aria-hidden=\"true\"><rect width=\"32\" height=\"32\" rx=\"7\" fill=\"currentColor\"/><circle cx=\"16\" cy=\"8.5\" r=\"2.4\" fill=\"var(--canvas)\"/><rect x=\"14.25\" y=\"12\" width=\"3.5\" height=\"8\" rx=\"0.6\" fill=\"var(--canvas)\"/><rect x=\"9\" y=\"22.5\" width=\"14\" height=\"2\" rx=\"0.4\" fill=\"var(--canvas)\"/><rect x=\"9\" y=\"25.75\" width=\"14\" height=\"1.25\" rx=\"0.4\" fill=\"var(--canvas)\"/></svg><span class=\"ds-logo-word\">Invoicely</span></a><nav class=\"ds-nav-actions\"><a class=\"ds-nav-link\" href=\"#\">Sign in</a><a class=\"ds-nav-cta\" href=\"#\">Get started</a></nav></header>",
+      "css": ".ds-nav { font-family: var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif); display: flex; align-items: center; justify-content: space-between; height: 56px; padding: 0 24px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--canvas) 85%, transparent); backdrop-filter: blur(12px); } .ds-logo { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; } .ds-logo-mark { width: 28px; height: 28px; flex-shrink: 0; color: var(--fg); } .ds-logo-word { font-size: 17px; font-weight: 600; letter-spacing: -0.025em; color: var(--fg); } .ds-nav-actions { display: flex; align-items: center; gap: 4px; } .ds-nav-link { color: var(--fg-muted); font-size: 14px; font-weight: 500; padding: 8px 12px; text-decoration: none; transition: color .15s; } .ds-nav-link:hover { color: var(--fg); } .ds-nav-cta { background: var(--fg); color: var(--canvas); font-size: 14px; font-weight: 500; padding: 6px 14px; border-radius: 6px; text-decoration: none; transition: opacity .15s; } .ds-nav-cta:hover { opacity: .9; }"
+    },
+    {
+      "name": "Paper Sheet",
+      "kind": "card",
+      "refersTo": "paper-sheet",
+      "description": "Theme-independent invoice miniature; the signature component.",
+      "html": "<div class=\"ds-paper\"><div class=\"ds-paper-head\"><div><p class=\"ds-paper-strong\">Okonkwo Studio</p><p class=\"ds-paper-muted\">Lagos, Nigeria</p></div><div class=\"ds-paper-right\"><p class=\"ds-paper-strong\">Invoice</p><p class=\"ds-paper-muted ds-mono\">INV-0047</p></div></div><table class=\"ds-paper-table\"><thead><tr><th>Item</th><th>Qty</th><th>Amount</th></tr></thead><tbody><tr><td>Menu redesign</td><td class=\"ds-mono\">1</td><td class=\"ds-mono\">$1,240.00</td></tr><tr><td>Photography, day rate</td><td class=\"ds-mono\">2</td><td class=\"ds-mono\">$770.00</td></tr></tbody></table><div class=\"ds-paper-total\"><span>Total due</span><span class=\"ds-mono ds-paper-sum\">$2,010.00</span></div></div>",
+      "css": ".ds-paper { font-family: var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif); max-width: 340px; background: #f3f3ef; color: #1c1c1f; border-radius: 6px; padding: 24px; box-shadow: 0 8px 24px -12px rgb(0 0 0 / .6); } .ds-paper p { margin: 0; } .ds-paper-head { display: flex; justify-content: space-between; padding-bottom: 16px; border-bottom: 1px solid #dcdcd6; } .ds-paper-right { text-align: right; } .ds-paper-strong { font-size: 14px; font-weight: 600; letter-spacing: -0.025em; } .ds-paper-muted { font-size: 12px; color: #6b6b70; } .ds-mono { font-family: var(--font-mono, 'Geist Mono', ui-monospace, monospace); font-variant-numeric: tabular-nums; } .ds-paper-table { width: 100%; margin-top: 16px; font-size: 12px; border-collapse: collapse; } .ds-paper-table th { text-align: left; font-weight: 500; color: #6b6b70; padding-bottom: 6px; border-bottom: 1px solid #dcdcd6; } .ds-paper-table th:not(:first-child), .ds-paper-table td:not(:first-child) { text-align: right; } .ds-paper-table td { padding: 6px 0; } .ds-paper-total { display: flex; justify-content: space-between; align-items: baseline; margin-top: 12px; padding-top: 12px; border-top: 1px solid #1c1c1f; font-size: 12px; font-weight: 500; } .ds-paper-sum { font-size: 18px; font-weight: 600; letter-spacing: -0.025em; }"
+    },
+    {
+      "name": "Ledger List",
+      "kind": "custom",
+      "refersTo": "panel",
+      "description": "Hairline-divided list with icon wells, used instead of cards.",
+      "html": "<ul class=\"ds-ledger\"><li><span class=\"ds-well\">↓</span><div><h3>PDF in one click</h3><p>Rendered in the browser as a vector PDF.</p></div></li><li><span class=\"ds-well\">%</span><div><h3>Totals that add up</h3><p>Quantity times rate, summed for you.</p></div></li></ul>",
+      "css": ".ds-ledger { font-family: var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif); list-style: none; margin: 0; padding: 0; max-width: 480px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); } .ds-ledger li { display: flex; gap: 16px; padding: 24px 0; } .ds-ledger li + li { border-top: 1px solid var(--line); } .ds-well { display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 32px; height: 32px; border-radius: 6px; border: 1px solid var(--line-strong); color: var(--accent); font-size: 14px; } .ds-ledger h3 { margin: 0; font-size: 16px; font-weight: 500; color: var(--fg); } .ds-ledger p { margin: 4px 0 0; font-size: 14px; line-height: 1.625; color: var(--fg-muted); }"
+    },
+    {
+      "name": "Status Marker",
+      "kind": "chip",
+      "refersTo": "status-marker",
+      "description": "Invoice status pill that also opens the status menu.",
+      "html": "<div class=\"ds-status-row\"><button class=\"ds-status ds-status-paid\"><span class=\"ds-dot\"></span>paid</button><button class=\"ds-status ds-status-sent\"><span class=\"ds-dot\"></span>sent</button><button class=\"ds-status ds-status-draft\"><span class=\"ds-dot\"></span>draft</button></div>",
+      "css": ".ds-status-row { display: flex; gap: 8px; } .ds-status { font-family: var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif); display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; font-size: 12px; font-weight: 500; text-transform: capitalize; background: none; border: 1px solid var(--line); border-radius: 9999px; cursor: pointer; transition: background .15s, border-color .15s; } .ds-status:hover { background: var(--surface); border-color: var(--line-strong); } .ds-status:focus-visible { outline: 2px solid var(--fg-muted); outline-offset: 1px; } .ds-dot { width: 6px; height: 6px; border-radius: 9999px; box-sizing: border-box; } .ds-status-paid { color: var(--accent); } .ds-status-paid .ds-dot { background: var(--accent); } .ds-status-sent { color: var(--fg); } .ds-status-sent .ds-dot { background: var(--fg-muted); } .ds-status-draft { color: var(--fg-subtle); } .ds-status-draft .ds-dot { border: 1px solid var(--fg-subtle); }"
+    },
+    {
+      "name": "Row Menu",
+      "kind": "custom",
+      "refersTo": "menu",
+      "description": "Floating actions menu opened from a row's icon button.",
+      "html": "<div class=\"ds-menu\" role=\"menu\"><button class=\"ds-menu-item\" role=\"menuitem\">View invoice</button><button class=\"ds-menu-item\" role=\"menuitem\">Edit invoice</button><div class=\"ds-menu-sep\"></div><button class=\"ds-menu-item ds-menu-danger\" role=\"menuitem\">Delete invoice</button></div>",
+      "css": ".ds-menu { font-family: var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif); width: 176px; padding: 4px 0; background: var(--raised); border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 12px 32px -12px rgb(0 0 0 / .35); } .ds-menu-item { font-family: var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif); display: block; width: 100%; text-align: left; padding: 8px 12px; font-size: 14px; color: var(--fg-muted); background: none; border: none; cursor: pointer; transition: background .15s, color .15s; } .ds-menu-item:hover, .ds-menu-item:focus-visible { background: var(--surface); color: var(--fg); outline: none; } .ds-menu-sep { margin: 4px 0; border-top: 1px solid var(--line); } .ds-menu-danger, .ds-menu-danger:hover { color: var(--danger); } .ds-menu-danger:hover { background: var(--danger-bg); }"
+    },
+    {
+      "name": "Confirm Dialog",
+      "kind": "card",
+      "refersTo": "dialog",
+      "description": "Destructive confirmation: named title, one line of consequence, ghost cancel, danger confirm.",
+      "html": "<div class=\"ds-dialog\" role=\"alertdialog\"><h2>Delete Lekki Ridge Coffee Co.?</h2><p>This also permanently deletes <strong>3 invoices</strong> billed to them. It can't be undone.</p><div class=\"ds-dialog-actions\"><button class=\"ds-dialog-cancel\">Cancel</button><button class=\"ds-dialog-danger\">Delete client and invoices</button></div></div>",
+      "css": ".ds-dialog { font-family: var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif); max-width: 384px; padding: 24px; background: var(--raised); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 32px -12px rgb(0 0 0 / .35); } .ds-dialog h2 { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -0.02em; color: var(--fg); } .ds-dialog p { margin: 8px 0 0; font-size: 14px; line-height: 1.625; color: var(--fg-muted); } .ds-dialog strong { font-weight: 500; color: var(--danger); } .ds-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 24px; } .ds-dialog-cancel { font-family: var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif); padding: 8px 14px; font-size: 14px; font-weight: 500; color: var(--fg-muted); background: none; border: none; border-radius: 6px; cursor: pointer; } .ds-dialog-cancel:hover { color: var(--fg); background: var(--surface); } .ds-dialog-danger { font-family: var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif); padding: 8px 14px; font-size: 14px; font-weight: 500; color: var(--canvas); background: var(--danger); border: none; border-radius: 6px; cursor: pointer; transition: opacity .15s; } .ds-dialog-danger:hover { opacity: .9; } .ds-dialog-danger:focus-visible, .ds-dialog-cancel:focus-visible { outline: 2px solid var(--fg-muted); outline-offset: 2px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Ledger Sheet",
+    "overview": "Invoicely borrows its manners from an accountant's ruled paper. Every surface is organized by thin lines, not boxes. Every figure sits in a monospaced column so it can be checked at a glance. Nothing appears that the invoice doesn't need. The interface is a quiet charcoal desk (dark is the default theme), and the one warm, lit object on it is the invoice itself: an off-white sheet of paper with ink-dark type.\n\nThe system is deliberately low-chroma. Neutrals carry nearly all of the work. A single muted green, **Paid Green**, appears only where something is confirmed, positive, or settled. Hierarchy comes from weight, tight negative tracking on headings, and the rhythm of hairline rules. Size jumps and colour fills play no part. Density is moderate. It's comfortable enough for a first-time freelancer, and tight enough that a list of line items reads like a ledger rather than a form.\n\nDepth is **subtly layered**. Surfaces step up tonally from canvas to surface to raised, and a soft ambient shadow may lift a panel or card off the canvas. The paper sheet always carries the deepest shadow in any view, because it is the object the user is making.",
+    "keyCharacteristics": [
+      "Dark-first, charcoal rather than black; off-white text rather than pure white.",
+      "One accent (Paid Green), used sparingly and always meaning \"good / done\".",
+      "Hairline dividers (1px `line`) structure lists, sections, and steps.",
+      "Geist for words, Geist Mono with tabular numerals for every number, code, and ID.",
+      "Ink-on-canvas primary buttons, inverted per theme, with no coloured CTAs.",
+      "The invoice is rendered as physical paper, even in dark mode."
+    ],
+    "rules": [
+      {
+        "name": "The Paid Green Rule",
+        "body": "Green means money is right or done. If an element isn't confirming, succeeding, or marking something as settled, it doesn't get the accent. Keep it to roughly one accent moment per viewport.",
+        "section": "colors"
+      },
+      {
+        "name": "The Semantic Token Rule",
+        "body": "Colour comes only from the semantic tokens. `zinc-*`, `red-*`, `bg-white`, and paired `dark:` classes are legacy and should not be used. Theming happens once, in `index.css`.",
+        "section": "colors"
+      },
+      {
+        "name": "The No Pure Extremes Rule",
+        "body": "No `#000` canvas and no `#fff` text in dark mode. The darkest value is `canvas-dark`; the lightest dark-mode text is `fg-dark`.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tabular Figures Rule",
+        "body": "Any number a user might add, compare, or check (quantity, rate, amount, total, invoice number, currency code) is set in Geist Mono with `tabular-nums`. Words are never set in mono.",
+        "section": "typography"
+      },
+      {
+        "name": "The Tight Heading Rule",
+        "body": "Headings are semibold (600) with negative tracking (-0.03em to -0.035em). Body text keeps default tracking. Bold (700) is not used for headings in the token system.",
+        "section": "typography"
+      },
+      {
+        "name": "The Paper Is Highest Rule",
+        "body": "No component may cast a heavier shadow than the invoice paper in the same view.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Ambient Only Rule",
+        "body": "Shadows are soft and diffuse (large blur, negative spread, ≤10% opacity on cards). No hard offsets, coloured shadows, or glows.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Small Corners Rule",
+        "body": "Nothing interactive goes above 6px. `rounded-2xl` and larger belong to the legacy styling and are being retired.",
+        "section": "shapes"
+      }
+    ],
+    "dos": [
+      "**Do** use the semantic tokens (`bg-canvas`, `text-fg-muted`, `border-line`) for every colour, so both themes work from one class.",
+      "**Do** set every quantity, rate, amount, total, currency code, and invoice number in Geist Mono with `tabular-nums`.",
+      "**Do** structure lists and sections with 1px hairlines (`divide-line`, `border-t border-line`) before reaching for cards.",
+      "**Do** keep the primary button ink-on-canvas (`bg-fg text-canvas`) at a 6px radius.",
+      "**Do** reserve Paid Green for confirmation, success, and \"paid\".",
+      "**Do** render the invoice preview as theme-independent paper that matches the PDF.",
+      "**Do** respect `prefers-reduced-motion`. Motion is limited to a short 240ms rise-in (`cubic-bezier(0.2, 0.7, 0.2, 1)`) and 150–200ms colour transitions.",
+      "**Do** reuse the shared pieces: `AuthField`, `FormAlert`, `Dialog`, `Logo`.",
+      "**Do** give every async page a loading, empty, load-error (with retry), and no-results state.",
+      "**Do** say plainly what a destructive action removes. When something blocks it (a client that still has invoices), say what and why instead of offering the delete.",
+      "**Do** use the shared status pieces (`components/invoices/status.tsx`, `statusStyles.ts`) wherever an invoice status appears."
+    ],
+    "donts": [
+      "**Don't** use raw Tailwind palette classes (`zinc-*`, `red-*`, `green-*`, `bg-white`) or paired `dark:` overrides. That's the legacy pattern being retired.",
+      "**Don't** add helper text under fields or descriptions beside form section headings.",
+      "**Don't** colour statuses with blue, amber, or other hues, or colour non-error actions (like Sign out) red.",
+      "**Don't** use `alert()`, blurred scrims, or gradient notices. Errors go in `FormAlert` or inline next to the action.",
+      "**Don't** use pure `#000` backgrounds or pure `#fff` text in dark mode.",
+      "**Don't** use coloured or gradient primary buttons, or use the accent as a large fill.",
+      "**Don't** go above 6px radius on buttons, inputs, or small cards, or use `rounded-2xl` anywhere.",
+      "**Don't** add hard or coloured shadows, or let anything cast a heavier shadow than the paper sheet.",
+      "**Don't** set headings in bold (700) or uppercase labels. Headings are 600 with tight tracking; labels are sentence case.",
+      "**Don't** set prose in Geist Mono or numbers in proportional figures."
+    ]
+  }
+}

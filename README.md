@@ -14,7 +14,7 @@ Invoicely is an invoicing web application designed to help freelancers, contract
 - **📝 Premium Invoice Composer**:
   - Unique invoice number generator.
   - Optional due date configuration.
-  - Multi-currency itemized billing: Add/remove product entries dynamically with individual currency support (`USD`, `NGN`, `EUR`, `GBP`) per line item.
+  - Currency set once in your profile (`NGN`, `USD`, `EUR`, `GBP`, `CAD`); every new invoice uses it.
   - Live calculations: Key in rate/quantity values to see instant subtotal adjustments.
 - **📊 Real-time Dashboard List**:
   - Interactive dashboard grouping subtotal amounts by active currency.
