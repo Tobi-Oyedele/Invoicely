@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { getInvoices, invoiceToView } from "../../lib/invoices.api";
+import { getCurrentUser } from "../../lib/api";
 import { supabase } from "../../lib/supabase";
 import { formatDate } from "../../utils/date";
 import { FormAlert } from "../../components/auth/FormAlert";
@@ -25,32 +27,8 @@ import {
   FiRefreshCw,
 } from "react-icons/fi";
 
-interface LineItem {
-  id: string;
-  invoice_id: string;
-  description: string;
-  quantity: number;
-  rate: number;
-}
-
-interface Client {
-  client_name: string;
-}
-
-interface Invoice {
-  id: string;
-  user_id: string;
-  client_id: string;
-  invoice_number: string;
-  issue_date: string;
-  due_date: string;
-  status: InvoiceStatus;
-  notes?: string;
-  created_at: string;
-  line_items: LineItem[];
-  clients: Client | null;
-  currency?: string | null;
-}
+type Invoice = ReturnType<typeof invoiceToView>;
+type LineItem = Invoice["line_items"][number];
 
 const menuItemClass =
   "w-full flex items-center gap-2.5 px-3 py-2 text-left text-sm text-fg-muted hover:text-fg hover:bg-surface focus-visible:bg-surface focus-visible:text-fg focus-visible:outline-none transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed";
@@ -84,27 +62,8 @@ const InvoicesPage = () => {
     try {
       setLoading(true);
       setLoadError(null);
-      const {
-        data: { user },
-        error: authError,
-      } = await supabase.auth.getUser();
-
-      if (authError || !user) {
-        throw new Error("Your session has expired. Sign in again to see your invoices.");
-      }
-
-      const { data, error: dbError } = await supabase
-        .from("invoices")
-        .select(`
-          *,
-          line_items (*),
-          clients (client_name)
-        `)
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-
-      if (dbError) throw dbError;
-      setInvoices(data || []);
+      const data = await getInvoices();
+      setInvoices(data.map(invoiceToView));
     } catch (err) {
       const error = err as Error;
       console.error("Error fetching invoices:", error);
@@ -130,29 +89,11 @@ const InvoicesPage = () => {
   useEffect(() => {
     const checkProfileStatus = async () => {
       try {
-        const {
-          data: { user },
-          error: authError,
-        } = await supabase.auth.getUser();
-
-        if (authError || !user) return;
-
-        const { data: profile, error: dbError } = await supabase
-          .from("profiles")
-          .select("bank_name, account_number")
-          .eq("id", user.id)
-          .maybeSingle();
-
-        if (dbError) throw dbError;
-
-        const missing = [];
-        if (!profile) {
-          missing.push("bank name", "account number");
-        } else {
-          if (!profile.bank_name) missing.push("bank name");
-          if (!profile.account_number) missing.push("account number");
-        }
-
+        const user = await getCurrentUser();
+        if (!user) return;
+        const missing: string[] = [];
+        if (!user.paymentDetails?.bankName) missing.push("bank name");
+        if (!user.paymentDetails?.accountNumber) missing.push("account number");
         setMissingFields(missing);
       } catch (err) {
         console.error("Error checking profile status in invoices page:", err);

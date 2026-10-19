@@ -71,3 +71,39 @@ export const clientInvoiceConflictSchema = z.object({
   message: z.string(),
   invoiceCount: z.number().int().positive(),
 });
+
+const invoicePartySchema = z.object({
+  name: z.string().min(1), email: z.string().optional(),
+  location: z.string().optional(), phone: z.string().optional(),
+});
+export const invoiceResponseSchema = z.object({
+  id: z.string().min(1), clientId: z.string().min(1),
+  invoiceNumber: z.string().min(1),
+  status: z.enum(["draft", "sent", "paid", "overdue"]),
+  currency: z.string().min(1),
+  from: invoicePartySchema.extend({email: z.email()}),
+  billingTo: invoicePartySchema,
+  issueDate: z.iso.datetime(), dueDate: z.iso.datetime().optional(),
+  lineItems: z.array(z.object({
+    description: z.string(), quantity: z.number(), rate: z.number(), amount: z.number(),
+  })),
+  subtotal: z.number(), notes: z.string().optional(),
+  createdAt: z.iso.datetime(), updatedAt: z.iso.datetime(),
+});
+export type ApiInvoice = z.infer<typeof invoiceResponseSchema>;
+export const invoicesResponseSchema = z.object({invoices: z.array(invoiceResponseSchema)});
+export const singleInvoiceResponseSchema = z.object({invoice: invoiceResponseSchema});
+
+export const invoiceEditInputSchema = z.object({
+  issueDate: z.string().min(1, "Issue date is required.").pipe(z.iso.date("Enter a valid issue date.")),
+  dueDate: z.iso.date("Enter a valid due date.").nullable(),
+  notes: z.string(),
+  lineItems: z.array(z.object({
+    description: z.string().trim().min(1, "Every line item needs a description."),
+    quantity: z.number().min(1, "Quantity must be at least 1."),
+    rate: z.number().min(0, "Rate cannot be negative."),
+  })).min(1, "Add at least one line item."),
+}).refine(data => data.dueDate === null || data.dueDate >= data.issueDate, {
+  message: "The due date can't be before the issue date.", path: ["dueDate"],
+});
+export type InvoiceEditInput = z.infer<typeof invoiceEditInputSchema>;
