@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { supabase } from "../lib/supabase";
+import { getClients, createClient, updateClient, deleteClient, ClientHasInvoicesError } from "../lib/clients.api";
 import { FiPlus, FiRefreshCw } from "react-icons/fi";
 import { ClientsHeader } from "../components/client/ClientsHeader";
 import { ClientsSearch } from "../components/client/ClientsSearch";
@@ -42,27 +42,12 @@ const Clients = () => {
     try {
       setLoading(true);
       setLoadError(null);
-      const {
-        data: { user },
-        error: authError,
-      } = await supabase.auth.getUser();
-
-      if (authError || !user) {
-        throw new Error("Your session has expired. Sign in again to see your clients.");
-      }
-
-      const { data, error: dbError } = await supabase
-        .from("clients")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-
-      if (dbError) throw dbError;
-      setClients(data || []);
+      const data = await getClients();
+      setClients(data);
     } catch (err) {
-      const error = err as Error;
-      console.error("Error fetching clients:", error);
-      setLoadError(error.message || "We couldn't load your clients.");
+      setLoadError(
+        err instanceof Error ? err.message : "We couldn't load your clients.",
+      );
     } finally {
       setLoading(false);
     }
@@ -133,26 +118,13 @@ const Clients = () => {
     closeMenu();
   };
 
-  // Open confirmation modal for deleting a client. The database won't delete a
-  // client that still has invoices, so count them first and say so up front.
-  const openDeleteModal = async (client: Client) => {
+  // The delete endpoint checks invoice dependencies when deletion is attempted.
+  const openDeleteModal = (client: Client) => {
     setSelectedClient(client);
     setActionError(null);
     setInvoiceCount(null);
     setIsDeleteModalOpen(true);
     closeMenu();
-
-    const { count, error } = await supabase
-      .from("invoices")
-      .select("id", { count: "exact", head: true })
-      .eq("client_id", client.id);
-
-    if (error) {
-      console.error("Error counting client invoices:", error);
-      setActionError("We couldn't check this client's invoices, so deleting is paused. Close and try again.");
-      return;
-    }
-    setInvoiceCount(count ?? 0);
   };
 
   const handleMenuToggle = (e: React.MouseEvent, clientId: string) => {
@@ -182,56 +154,24 @@ const Clients = () => {
       setActionError(null);
       setNameError(null);
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) throw new Error("Your session has expired. Sign in again to save this client.");
-
       const clientData = {
-        client_name: clientName.trim(),
-        email: clientEmail.trim() || null,
-        phone_number: clientPhone.trim() || null,
-        address: clientAddress.trim() || null,
+        name: clientName.trim(),
+        email: clientEmail.trim(),
+        phone: clientPhone.trim(),
+        billingAddress: clientAddress.trim(),
       };
 
       if (selectedClient) {
-        // Edit flow
-        const { data, error } = await supabase
-          .from("clients")
-          .update(clientData)
-          .eq("id", selectedClient.id)
-          .select()
-          .single();
-
-        if (error) throw error;
-
-        // Update locally
-        setClients((prev) =>
-          prev.map((c) => (c.id === selectedClient.id ? data : c)),
-        );
+        const saved = await updateClient(selectedClient.id, clientData);
+        setClients((prev) => prev.map((c) => c.id === saved.id ? saved : c));
       } else {
-        // Add flow
-        const { data, error } = await supabase
-          .from("clients")
-          .insert({
-            ...clientData,
-            user_id: user.id,
-          })
-          .select()
-          .single();
-
-        if (error) throw error;
-
-        // Prepend locally
-        setClients((prev) => [data, ...prev]);
+        const saved = await createClient(clientData);
+        setClients((prev) => [saved, ...prev]);
       }
 
       setIsFormModalOpen(false);
     } catch (err) {
-      const error = err as Error;
-      console.error("Error submitting client form:", error);
-      setActionError(error.message || "The client wasn't saved. Try again.");
+      setActionError(err instanceof Error ? err.message : "The client wasn't saved. Try again.");
     } finally {
       setSubmitting(false);
     }
@@ -239,32 +179,23 @@ const Clients = () => {
 
   // Handle client deletion confirmation
   const handleDeleteConfirm = async () => {
-    if (!selectedClient || invoiceCount !== 0) return;
+    if (!selectedClient || (invoiceCount !== null && invoiceCount > 0)) return;
 
     try {
       setSubmitting(true);
       setActionError(null);
 
-      const { error } = await supabase
-        .from("clients")
-        .delete()
-        .eq("id", selectedClient.id);
-
-      if (error) {
-        // An invoice was added for this client after the dialog opened
-        if (error.code === "23503") {
-          throw new Error("This client now has invoices. Delete those first, then try again.");
-        }
-        throw error;
-      }
+      await deleteClient(selectedClient.id);
 
       // Remove locally
       setClients((prev) => prev.filter((c) => c.id !== selectedClient.id));
       setIsDeleteModalOpen(false);
     } catch (err) {
-      const error = err as Error;
-      console.error("Error deleting client:", error);
-      setActionError(error.message || "The client wasn't deleted. Try again.");
+      if (err instanceof ClientHasInvoicesError) {
+        setInvoiceCount(err.invoiceCount);
+      } else {
+        setActionError(err instanceof Error ? err.message : "The client wasn't deleted. Try again.");
+      }
     } finally {
       setSubmitting(false);
     }
