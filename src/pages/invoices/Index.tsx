@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { getInvoices, invoiceToView } from "../../lib/invoices.api";
+import { getInvoices, invoiceToView, updateInvoiceStatus } from "../../lib/invoices.api";
 import { getCurrentUser } from "../../lib/api";
 import { supabase } from "../../lib/supabase";
 import { formatDate } from "../../utils/date";
@@ -135,17 +135,8 @@ const InvoicesPage = () => {
     try {
       setSubmitting(true);
       setActionError(null);
-      const { error } = await supabase
-        .from("invoices")
-        .update({ status: newStatus })
-        .eq("id", invoiceId);
-
-      if (error) throw error;
-
-      // Update local state dynamically
-      setInvoices((prev) =>
-        prev.map((inv) => (inv.id === invoiceId ? { ...inv, status: newStatus } : inv))
-      );
+      const saved = invoiceToView(await updateInvoiceStatus(invoiceId, newStatus));
+      setInvoices(prev => prev.map(inv => inv.id === invoiceId ? saved : inv));
       closeMenus();
     } catch (err) {
       const error = err as Error;
@@ -556,7 +547,7 @@ const InvoicesPage = () => {
                   role="menuitemradio"
                   aria-checked={current}
                   autoFocus={i === 0}
-                  disabled={submitting}
+                  disabled={submitting || (!current && (status === "draft" || selectedStatusInvoice.status === "paid" || (selectedStatusInvoice.status !== "draft" && status !== "paid")))}
                   onClick={(e) => {
                     e.stopPropagation();
                     if (current) closeMenus();

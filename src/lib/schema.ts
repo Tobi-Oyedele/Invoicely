@@ -118,3 +118,5 @@ export const invoiceCreateInputSchema = z.object({
   message: "The due date can't be before the issue date.", path: ["dueDate"],
 });
 export type InvoiceCreateInput = z.infer<typeof invoiceCreateInputSchema>;
+
+export const invoiceStatusInputSchema = z.object({ status: z.enum(["sent", "paid"]) });
