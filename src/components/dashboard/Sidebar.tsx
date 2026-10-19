@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { FiSun, FiMoon, FiX, FiLogOut, FiLoader } from "react-icons/fi";
-import { supabase } from "../../lib/supabase";
+import { useAuth } from "../../hooks/useAuth";
 import { navItems } from "../../data/navigation";
 import { useTheme } from "../../hooks/useTheme";
 import { Logo } from "../brand/Logo";
@@ -17,21 +17,20 @@ const THEMES = [
 
 const Sidebar = ({ onClose }: SidebarProps) => {
   const navigate = useNavigate();
+  const { signOut } = useAuth();
+  const [logoutError, setLogoutError] = useState<string | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
   const [theme, setTheme] = useTheme();
 
   const handleLogout = async () => {
     setLoggingOut(true);
+    setLogoutError(null);
     try {
-      // 1. Navigate to the public landing page first.
-      // This unmounts the protected DashboardLayout, preventing its AuthGuard from intercepting the null session and redirecting the user to /sign-in.
-      navigate("/");
-
-      // 2. Perform the sign-out routine in the background
-      await supabase.auth.signOut();
-      if (onClose) onClose();
-    } catch (err) {
-      console.error("Error signing out:", err);
+      await signOut();
+      navigate("/", { replace: true });
+      onClose?.();
+    } catch {
+      setLogoutError("Unable to sign out. Please try again.");
     } finally {
       setLoggingOut(false);
     }
@@ -104,6 +103,7 @@ const Sidebar = ({ onClose }: SidebarProps) => {
           ))}
         </div>
 
+        {logoutError && <p role="alert" className="px-2.5 text-sm text-danger">{logoutError}</p>}
         <button
           type="button"
           onClick={handleLogout}

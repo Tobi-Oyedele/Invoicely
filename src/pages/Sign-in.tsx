@@ -5,10 +5,12 @@ import { AuthShell } from "../components/auth/AuthShell";
 import { AuthField } from "../components/auth/AuthField";
 import { FormAlert } from "../components/auth/FormAlert";
 import { SubmitButton } from "../components/auth/SubmitButton";
+import { useAuth } from "../hooks/useAuth";
 import { validateEmail } from "../lib/authValidation";
 
 const SignInPage = () => {
   const navigate = useNavigate();
+  const { signIn } = useAuth();
 
   useEffect(() => {
     document.title = "Sign In | Invoicely";
@@ -44,20 +46,14 @@ const SignInPage = () => {
     setSuccessMsg(null);
 
     try {
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (signInError) {
-        throw signInError;
-      }
+      await signIn(email, password);
 
       // Redirect to /invoices
       navigate("/invoices");
     } catch (err) {
-      const error = err as Error;
-      setError(error.message || "An unexpected error occurred during sign in.");
+      setError(
+        err instanceof Error ? err.message : "Unable to sign in. Please try again.",
+      );
     } finally {
       setLoading(false);
     }
