@@ -107,3 +107,14 @@ export const invoiceEditInputSchema = z.object({
   message: "The due date can't be before the issue date.", path: ["dueDate"],
 });
 export type InvoiceEditInput = z.infer<typeof invoiceEditInputSchema>;
+
+export const invoiceCreateInputSchema = z.object({
+  clientId: z.string().min(1, "Choose who this invoice is for."),
+  issueDate: z.string().min(1, "Issue date is required.").pipe(z.iso.date("Enter a valid issue date.")),
+  dueDate: z.iso.date("Enter a valid due date.").optional(),
+  notes: z.string(),
+  lineItems: invoiceEditInputSchema.shape.lineItems,
+}).refine(data => data.dueDate === undefined || data.dueDate >= data.issueDate, {
+  message: "The due date can't be before the issue date.", path: ["dueDate"],
+});
+export type InvoiceCreateInput = z.infer<typeof invoiceCreateInputSchema>;

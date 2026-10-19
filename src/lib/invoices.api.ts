@@ -5,8 +5,9 @@ import {
   singleInvoiceResponseSchema,
   errorResponseSchema,
   invoiceEditInputSchema,
+  invoiceCreateInputSchema,
 } from "./schema";
-import type { ApiInvoice, InvoiceEditInput } from "./schema";
+import type { ApiInvoice, InvoiceEditInput, InvoiceCreateInput } from "./schema";
 
 function requestError(error: unknown): Error {
   if (axios.isAxiosError<unknown>(error)) {
@@ -91,4 +92,15 @@ export async function updateInvoice(id: string, input: InvoiceEditInput): Promis
   } catch (error: unknown) {
     throw requestError(error);
   }
+}
+
+export async function createInvoice(input: InvoiceCreateInput): Promise<ApiInvoice> {
+  const checked = invoiceCreateInputSchema.safeParse(input);
+  if (!checked.success) throw new Error(checked.error.issues[0]?.message ?? "Check the invoice fields.");
+  try {
+    const response = await http.post<unknown>("/invoices", checked.data);
+    const result = singleInvoiceResponseSchema.safeParse(response.data);
+    if (!result.success) throw new Error("The server returned an unexpected invoice response.");
+    return result.data.invoice;
+  } catch (error: unknown) { throw requestError(error); }
 }
