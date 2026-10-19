@@ -9,7 +9,7 @@ export const emailSchema = z
 export const passwordSchema = z
   .string()
   .min(1, "Enter a password.")
-  .min(6, "Password should be at least 6 characters.");
+  .min(8, "Password should be at least 8 characters.");
 
 export const requiredSchema = (label: string) =>
   z.string().trim().min(1, `Enter your ${label}.`);

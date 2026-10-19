@@ -1,4 +1,23 @@
 import { z } from "zod";
+import { emailSchema, passwordSchema, requiredSchema } from "./authValidation";
+
+export const registerInputSchema = z.object({
+  firstName: requiredSchema("first name"),
+  lastName: requiredSchema("last name"),
+  email: emailSchema,
+  password: passwordSchema,
+});
+export type RegisterInput = z.infer<typeof registerInputSchema>;
+
+export const registerResponseSchema = z.object({
+  user: z.object({
+    id: z.string().min(1),
+    firstName: z.string().min(1),
+    lastName: z.string().min(1),
+    email: z.email(),
+  }),
+});
+export type RegisterResponse = z.infer<typeof registerResponseSchema>;
 
 export const loginResponseSchema = z.object({
   user: z.object({
