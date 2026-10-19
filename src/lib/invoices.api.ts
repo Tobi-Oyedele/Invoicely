@@ -116,3 +116,22 @@ export async function updateInvoiceStatus(id: string, status: string): Promise<A
     return result.data.invoice;
   } catch (error: unknown) { throw requestError(error); }
 }
+
+export async function deleteInvoice(id: string): Promise<void> {
+  try {
+    const response = await http.delete<unknown>(`/invoices/${encodeURIComponent(id)}`);
+    // A successful deletion has no JSON response body.
+    if (response.status !== 204) {
+      throw new Error("The server did not confirm invoice deletion. Refresh the list before trying again.");
+    }
+  } catch (error: unknown) {
+    if (axios.isAxiosError<unknown>(error)) {
+      const result = errorResponseSchema.safeParse(error.response?.data);
+      throw new Error(
+        result.success ? result.data.message : "Unable to delete the invoice. Please try again.",
+        {cause: error},
+      );
+    }
+    throw error;
+  }
+}

@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { getInvoices, invoiceToView, updateInvoiceStatus } from "../../lib/invoices.api";
+import { getInvoices, invoiceToView, updateInvoiceStatus, deleteInvoice } from "../../lib/invoices.api";
 import { getCurrentUser } from "../../lib/api";
-import { supabase } from "../../lib/supabase";
 import { formatDate } from "../../utils/date";
 import { FormAlert } from "../../components/auth/FormAlert";
 import { Dialog } from "../../components/ui/Dialog";
@@ -56,6 +55,7 @@ const InvoicesPage = () => {
   const [statusSelectorPosition, setStatusSelectorPosition] = useState<{ top: number; right: number } | null>(null);
 
   // Confirmation modal states
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [invoiceToDelete, setInvoiceToDelete] = useState<Invoice | null>(null);
 
   const fetchInvoices = async () => {
@@ -149,29 +149,20 @@ const InvoicesPage = () => {
   };
 
   const handleDeleteInvoice = async () => {
-    if (!invoiceToDelete) return;
-
+    if (!invoiceToDelete || submitting) return;
+    if (invoiceToDelete.status !== "draft") {
+      setDeleteError("Only draft invoices can be deleted.");
+      return;
+    }
     try {
       setSubmitting(true);
-      setActionError(null);
-
-      // Deleting cascade should ideally handle line_items automatically in standard Supabase relations.
-      // But we double check and handle deletion safely.
-      const { error } = await supabase
-        .from("invoices")
-        .delete()
-        .eq("id", invoiceToDelete.id);
-
-      if (error) throw error;
-
-      // Filter locally
-      setInvoices((prev) => prev.filter((inv) => inv.id !== invoiceToDelete.id));
+      setDeleteError(null);
+      await deleteInvoice(invoiceToDelete.id);
+      // Keep the row unless the backend confirms deletion.
+      setInvoices(prev => prev.filter(inv => inv.id !== invoiceToDelete.id));
       setInvoiceToDelete(null);
-    } catch (err) {
-      const error = err as Error;
-      console.error("Error deleting invoice:", error);
-      setActionError(error.message || "The invoice wasn't deleted. Try again.");
-      setInvoiceToDelete(null);
+    } catch (error: unknown) {
+      setDeleteError(error instanceof Error ? error.message : "The invoice wasn't deleted. Try again.");
     } finally {
       setSubmitting(false);
     }
@@ -517,9 +508,12 @@ const InvoicesPage = () => {
               role="menuitem"
               onClick={(e) => {
                 e.stopPropagation();
+                setDeleteError(null);
                 setInvoiceToDelete(selectedMenuInvoice);
                 closeMenus();
               }}
+              disabled={submitting || selectedMenuInvoice.status !== "draft"}
+              title={selectedMenuInvoice.status !== "draft" ? "Only draft invoices can be deleted" : undefined}
               className={`${menuItemClass} text-danger! hover:bg-danger-bg! focus-visible:bg-danger-bg!`}
             >
               <FiTrash2 className="size-3.5 shrink-0" />
@@ -584,6 +578,9 @@ const InvoicesPage = () => {
               This permanently removes the invoice and all of its line items. It can't be undone.
             </p>
 
+            <div className="mt-4">
+              <FormAlert kind="error" message={deleteError} />
+            </div>
             <div className="mt-6 flex justify-end gap-2">
               <button
                 type="button"
@@ -596,7 +593,7 @@ const InvoicesPage = () => {
               </button>
               <button
                 type="button"
-                disabled={submitting}
+                disabled={submitting || invoiceToDelete.status !== "draft"}
                 onClick={handleDeleteInvoice}
                 className="inline-flex items-center justify-center gap-2 rounded-md bg-danger px-3.5 py-2 text-sm font-medium text-canvas transition hover:opacity-90 active:scale-[0.98] cursor-pointer disabled:opacity-60 disabled:cursor-wait focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger"
               >
