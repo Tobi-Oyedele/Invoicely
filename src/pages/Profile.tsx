@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { supabase } from "../lib/supabase";
+import { getCurrentUser } from "../lib/api";
+import { profileToForm, saveProfile } from "../lib/profile.api";
 import { ProfileHeader } from "../components/profile/ProfileHeader";
 import { PersonalInfoSection } from "../components/profile/PersonalInfoSection";
 import { BusinessDetailsSection } from "../components/profile/BusinessDetailsSection";
 import { PayoutCredentialsSection } from "../components/profile/PayoutCredentialsSection";
 import { EMPTY_PROFILE, type ProfileValues } from "../components/profile/types";
 import { InvoicingSection } from "../components/profile/InvoicingSection";
-import { DEFAULT_CURRENCY } from "../lib/currency";
 import { FiAlertCircle, FiCheck, FiLoader, FiRefreshCw } from "react-icons/fi";
 
 const Profile = () => {
@@ -24,7 +24,6 @@ const Profile = () => {
   const [saving, setSaving] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
 
   const dirty = (Object.keys(values) as (keyof ProfileValues)[]).some(
     (key) => values[key] !== savedValues[key],
@@ -60,55 +59,16 @@ const Profile = () => {
       setFetching(true);
       setLoadError(null);
 
-      // 1. Get logged-in user session (guaranteed by protected routes)
-      const {
-        data: { user },
-        error: authError,
-      } = await supabase.auth.getUser();
-
-      if (authError || !user) {
-        throw new Error("Your session has expired. Sign in again to edit your profile.");
-      }
-
-      setUserId(user.id);
-      setEmail(user.email || "");
-
-      // 2. Query profiles table by id
-      const { data: profile, error: dbError } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (dbError) throw dbError;
-
-      const loaded: ProfileValues = profile
-        ? {
-            firstName: profile.first_name || "",
-            lastName: profile.last_name || "",
-            businessName: profile.business_name || "",
-            city: profile.city || "",
-            country: profile.country || "",
-            bankName: profile.bank_name || "",
-            accountNumber: profile.account_number || "",
-            accountName: profile.account_name || "",
-            accountType: profile.account_type || "",
-            routingNumber: profile.routing_number || "",
-            swiftCode: profile.swift_code || "",
-            bankAddress: profile.bank_address || "",
-            currency: profile.default_currency || DEFAULT_CURRENCY,
-          }
-        : EMPTY_PROFILE;
-
+      const user = await getCurrentUser();
+      if (!user) throw new Error("Your session has expired. Sign in again to edit your profile.");
+      const loaded = profileToForm(user);
+      setEmail(user.email);
+      setCreatedAt(user.createdAt);
       setValues(loaded);
       setSavedValues(loaded);
-      // If the profile row doesn't exist yet, fall back to the auth account's creation date
-      setCreatedAt(profile?.created_at || user.created_at || "");
     } catch (err) {
-      const error = err as Error;
-      console.error("Error loading profile:", error);
-      // Never show an empty form after a failed load: saving it would erase stored details.
-      setLoadError(error.message || "We couldn't load your profile.");
+      // Never show an empty editable form after a failed load.
+      setLoadError(err instanceof Error ? err.message : "We couldn't load your profile.");
     } finally {
       setFetching(false);
     }
@@ -131,40 +91,22 @@ const Profile = () => {
   // Save changes handler
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!userId || !dirty) return;
+    if (!dirty) return;
 
     try {
       setSaving(true);
       setJustSaved(false);
       setErrorMsg(null);
 
-      // Upsert profile in database
-      const { error: upsertError } = await supabase.from("profiles").upsert({
-        id: userId,
-        first_name: values.firstName.trim() || null,
-        last_name: values.lastName.trim() || null,
-        email: email, // Read-only but kept stored
-        business_name: values.businessName.trim() || null,
-        city: values.city.trim() || null,
-        country: values.country.trim() || null,
-        bank_name: values.bankName.trim() || null,
-        account_number: values.accountNumber.trim() || null,
-        account_name: values.accountName.trim() || null,
-        account_type: values.accountType.trim() || null,
-        routing_number: values.routingNumber.trim() || null,
-        swift_code: values.swiftCode.trim() || null,
-        bank_address: values.bankAddress.trim() || null,
-        default_currency: values.currency,
-      });
-
-      if (upsertError) throw upsertError;
-
-      setSavedValues(values);
+      const user = await saveProfile(values);
+      const saved = profileToForm(user);
+      setValues(saved);
+      setSavedValues(saved);
+      setEmail(user.email);
+      setCreatedAt(user.createdAt);
       setJustSaved(true);
     } catch (err) {
-      const error = err as Error;
-      console.error("Error saving profile:", error);
-      setErrorMsg(error.message || "Your changes weren't saved. Try again.");
+      setErrorMsg(err instanceof Error ? err.message : "Your changes weren't saved. Try again.");
     } finally {
       setSaving(false);
     }

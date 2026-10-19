@@ -14,12 +14,27 @@ export const errorResponseSchema = z.object({
   message: z.string().min(1),
 });
 
+export const paymentDetailsSchema = z.object({
+  bankName: z.string().min(1),
+  accountNumber: z.string().min(1),
+  accountHolderName: z.string().min(1),
+  accountType: z.string().optional(),
+  routingSortCode: z.string().optional(),
+  swiftBicCode: z.string().optional(),
+  bankBranchAddress: z.string().optional(),
+});
+
 export const userSchema = z.object({
   id: z.string().min(1),
   firstName: z.string().min(1),
   lastName: z.string().min(1),
   email: z.email(),
-  currency: z.string(),
+  currency: z.enum(["NGN", "USD", "EUR", "GBP", "CAD"]),
+  businessName: z.string().optional(),
+  city: z.string().optional(),
+  country: z.string().optional(),
+  paymentDetails: paymentDetailsSchema.optional(),
+  createdAt: z.iso.datetime(),
 });
 
 export type AuthUser = z.infer<typeof userSchema>;
