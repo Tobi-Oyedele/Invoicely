@@ -1,6 +1,7 @@
-import { useState, type FormEvent } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { supabase } from "../lib/supabase";
+import { useEffect, useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
+import { resetPassword } from "../lib/api";
+import { useAuth } from "../hooks/useAuth";
 import { AuthShell } from "../components/auth/AuthShell";
 import { AuthField } from "../components/auth/AuthField";
 import { FormAlert } from "../components/auth/FormAlert";
@@ -8,7 +9,13 @@ import { SubmitButton } from "../components/auth/SubmitButton";
 import { validatePassword } from "../lib/authValidation";
 
 const ResetPassword = () => {
-  const navigate = useNavigate();
+  const { retry } = useAuth();
+  const [token] = useState(() => new URLSearchParams(window.location.hash.slice(1)).get("token") ?? "");
+  const validToken = /^[a-f0-9]{64}$/.test(token);
+  useEffect(() => {
+    // Keep the secret in memory, and remove it from the address bar/history entry.
+    window.history.replaceState(null, "", window.location.pathname + window.location.search);
+  }, []);
 
   // Form states
   const [newPassword, setNewPassword] = useState("");
@@ -30,7 +37,7 @@ const ResetPassword = () => {
     setErrorMsg(null);
     setSuccessMsg(null);
 
-    if (passwordError || mismatchError) {
+    if (passwordError || confirmError) {
       setTouched(true);
       return;
     }
@@ -38,21 +45,15 @@ const ResetPassword = () => {
     try {
       setLoading(true);
 
-      // Call supabase auth.updateUser to save the new password
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword,
-      });
-
-      if (error) throw error;
-
-      setSuccessMsg("Your password has been successfully updated! Redirecting to sign in...");
-      setTimeout(() => {
-        navigate("/sign-in");
-      }, 3000);
-    } catch (err) {
-      const error = err as Error;
-      console.error("Error resetting password:", error);
-      setErrorMsg(error.message || "Failed to update your password. Please try again.");
+      const message = await resetPassword(token, newPassword);
+      setSuccessMsg(message);
+      setNewPassword("");
+      setConfirmPassword("");
+      setTouched(false);
+      // Express cleared this browser's cookie; update shared login state too.
+      await retry();
+    } catch (error: unknown) {
+      setErrorMsg(error instanceof Error ? error.message : "Unable to update your password. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -61,7 +62,7 @@ const ResetPassword = () => {
   return (
     <AuthShell
       title="Set a new password"
-      subtitle="Choose a password you haven't used here before."
+      subtitle="Choose a new password for your account."
       footer={
         <Link
           to="/sign-in"
@@ -71,6 +72,7 @@ const ResetPassword = () => {
         </Link>
       }
     >
+      {!validToken && <FormAlert kind="error" message="This reset link is missing or invalid. Go back to sign in and request a new link." />}
       <FormAlert kind="error" message={errorMsg} />
       <FormAlert kind="success" message={successMsg} />
       <form
@@ -89,24 +91,24 @@ const ResetPassword = () => {
           label="New password"
           type="password"
           autoComplete="new-password"
-          disabled={loading}
+          disabled={loading || !validToken || !!successMsg}
           value={newPassword}
           onChange={(e) => setNewPassword(e.target.value)}
           onBlur={() => setTouched(true)}
           error={touched ? passwordError : null}
-          placeholder="At least 6 characters"
+          placeholder="At least 8 characters"
         />
         <AuthField
           label="Confirm password"
           type="password"
           autoComplete="new-password"
-          disabled={loading}
+          disabled={loading || !validToken || !!successMsg}
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
           error={touched || confirmPassword ? confirmError : null}
         />
         <div className="pt-2">
-          <SubmitButton loading={loading} loadingLabel="Updating password">
+          <SubmitButton disabled={!validToken || !!successMsg} loading={loading} loadingLabel="Updating password">
             Update password
           </SubmitButton>
         </div>

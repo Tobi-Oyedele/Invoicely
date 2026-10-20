@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { supabase } from "../lib/supabase";
+import { requestPasswordReset } from "../lib/api";
 import { AuthShell } from "../components/auth/AuthShell";
 import { AuthField } from "../components/auth/AuthField";
 import { FormAlert } from "../components/auth/FormAlert";
@@ -71,18 +71,9 @@ const SignInPage = () => {
     setSuccessMsg(null);
 
     try {
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-
-      if (resetError) {
-        throw resetError;
-      }
-
-      setSuccessMsg("A password reset link has been sent to your email address.");
-    } catch (err) {
-      const error = err as Error;
-      setError(error.message || "An unexpected error occurred while requesting reset.");
+      setSuccessMsg(await requestPasswordReset(email));
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : "Unable to request a reset link. Please try again.");
     } finally {
       setLoading(false);
     }

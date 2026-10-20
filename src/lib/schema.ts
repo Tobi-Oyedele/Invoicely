@@ -139,3 +139,11 @@ export const invoiceCreateInputSchema = z.object({
 export type InvoiceCreateInput = z.infer<typeof invoiceCreateInputSchema>;
 
 export const invoiceStatusInputSchema = z.object({ status: z.enum(["sent", "paid"]) });
+
+export const forgotPasswordInputSchema = z.object({ email: emailSchema });
+export const resetPasswordInputSchema = z.object({
+  token: z.string().regex(/^[a-f0-9]{64}$/, "This reset link is invalid. Request a new link."),
+  password: passwordSchema.refine(value => new TextEncoder().encode(value).length <= 72,
+    "Password must be at most 72 bytes long."),
+});
+export const passwordResetResponseSchema = z.object({ message: z.string().min(1) });

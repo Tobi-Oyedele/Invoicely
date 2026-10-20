@@ -3,6 +3,9 @@ import { http } from "./http";
 import {
   loginResponseSchema,
   registerInputSchema,
+  forgotPasswordInputSchema,
+  resetPasswordInputSchema,
+  passwordResetResponseSchema,
   registerResponseSchema,
   errorResponseSchema,
   meResponseSchema,
@@ -116,4 +119,31 @@ export async function register(input: RegisterInput): Promise<RegisterResponse> 
     }
     throw error;
   }
+}
+
+async function passwordResetRequest(path: string, input: unknown): Promise<string> {
+  try {
+    const response = await http.post<unknown>(path, input);
+    const parsed = passwordResetResponseSchema.safeParse(response.data);
+    if (!parsed.success) throw new Error("The server returned an unexpected password reset response.");
+    return parsed.data.message;
+  } catch (error: unknown) {
+    if (axios.isAxiosError<unknown>(error)) {
+      const parsed = errorResponseSchema.safeParse(error.response?.data);
+      throw new Error(parsed.success ? parsed.data.message : "Unable to complete password reset. Please try again.", { cause: error });
+    }
+    throw error;
+  }
+}
+
+export async function requestPasswordReset(email: string): Promise<string> {
+  const parsed = forgotPasswordInputSchema.safeParse({ email });
+  if (!parsed.success) throw new Error(parsed.error.issues[0].message);
+  return passwordResetRequest("/auth/forgot-password", parsed.data);
+}
+
+export async function resetPassword(token: string, password: string): Promise<string> {
+  const parsed = resetPasswordInputSchema.safeParse({ token, password });
+  if (!parsed.success) throw new Error(parsed.error.issues[0].message);
+  return passwordResetRequest("/auth/reset-password", parsed.data);
 }
