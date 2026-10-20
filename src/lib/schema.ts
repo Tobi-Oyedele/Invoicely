@@ -34,9 +34,10 @@ export const errorResponseSchema = z.object({
 });
 
 export const paymentDetailsSchema = z.object({
-  bankName: z.string().min(1),
-  accountNumber: z.string().min(1),
-  accountHolderName: z.string().min(1),
+  bankName: z.string().min(1).optional(),
+  accountNumber: z.string().min(1).optional(),
+  // Legacy responses may lack a holder name; saving still requires all bank fields.
+  accountHolderName: z.string().min(1).optional(),
   accountType: z.string().optional(),
   routingSortCode: z.string().optional(),
   swiftBicCode: z.string().optional(),
