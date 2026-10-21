@@ -255,7 +255,7 @@ const InvoicesPage = () => {
   const renderAmount = (invoice: Invoice) => (
     <span className="font-mono tabular-nums whitespace-nowrap">
       <span className="text-fg">{formatAmount(calculateTotal(invoice.line_items))}</span>{" "}
-      <span className="text-xs text-fg-subtle">{invoice.currency || "NGN"}</span>
+      <span className="text-xs text-fg-subtle">{invoice.currency}</span>
     </span>
   );
 

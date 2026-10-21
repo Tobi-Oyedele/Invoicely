@@ -8,7 +8,7 @@ Invoicely is an invoicing web application designed to help freelancers, contract
 
 ## ✨ Features
 
-- **🔒 Secure Authentication**: Instant user onboarding, password reset recovery flows, and secure sessions managed natively via Supabase Auth.
+- **🔒 Secure Authentication**: Instant user onboarding, password reset recovery flows, and sessions managed by the Express backend using HttpOnly cookies.
 - **💼 Business Profile Checklist**: A custom-designed welcome onboarding dashboard that validation-checks and guides users to complete their billing details (bank credentials).
 - **👥 Client Directory**: Create, edit, and keep track of a robust repository of recurring clients.
 - **📝 Premium Invoice Composer**:
@@ -30,7 +30,9 @@ Invoicely is an invoicing web application designed to help freelancers, contract
 - **Frontend Core**: [React 19](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/)
 - **Build Tool**: [Vite 8](https://vite.dev/)
 - **Styling**: [Tailwind CSS 4](https://tailwindcss.com/)
-- **Database & Authentication**: [Supabase](https://supabase.com/)
+- **API Client & Validation**: Axios + Zod
+- **Backend**: Separate Node.js/Express + MongoDB/Mongoose service
+- **Hosting**: Vercel (frontend), Render (backend)
 - **PDF Renderer**: [@react-pdf/renderer 4](https://react-pdf.org/)
 - **Icons**: [React Icons](https://react-icons.github.io/react-icons/)
 
@@ -42,17 +44,17 @@ Invoicely is an invoicing web application designed to help freelancers, contract
 
 Ensure you have the following installed on your machine:
 
-- [Node.js](https://nodejs.org/) (v18.0.0 or higher recommended)
+- [Node.js](https://nodejs.org/) (use Node.js 24, matching the deployment environment)
 - [npm](https://www.npmjs.com/) or [yarn](https://yarnpkg.com/)
-- A [Supabase](https://supabase.com/) account
+- A running [Invoicely backend](https://github.com/Tobi-Oyedele/invoicely-backend)
 
 ### Installation
 
 1. **Clone the Repository**:
 
    ```bash
-   git clone https://github.com/Tobi-Oyedele/Invoicio.git
-   cd invoice-generator
+   git clone https://github.com/Tobi-Oyedele/Invoicely.git
+   cd Invoicely
    ```
 
 2. **Install Project Dependencies**:
@@ -65,8 +67,7 @@ Ensure you have the following installed on your machine:
    Create a `.env` file in the root directory:
 
    ```env
-   VITE_SUPABASE_URL=https://your-project-ref.supabase.co
-   VITE_SUPABASE_KEY=your-supabase-anon-key
+   VITE_API_BASE_URL=http://localhost:4000/api
    ```
 
 4. **Launch the Local Development Server**:
@@ -85,19 +86,24 @@ Ensure you have the following installed on your machine:
 
 ---
 
-## 🗄️ Supabase Database Setup
+## Backend connection
 
-To configure your database backend, run the SQL schema migration script inside your Supabase SQL Editor. This script handles table creation, establishes cascade deletes, sets up Row-Level Security (RLS) constraints, and applies security policies.
+The frontend communicates with the separate Express backend through
+`src/lib/http.ts`. Axios sends cookies with requests, and API responses are
+validated with Zod before the app uses them. `AuthProvider` loads the current
+user through `GET /auth/me` and shares authentication state with components.
+The backend handles database access, passwords, invoice numbering, and ownership checks.
 
-The full setup script is located in:
-👉 **[supabase/schema.sql](file:///Users/tobz/Documents/invoice-generator/supabase/schema.sql)**
+For production, set this in Vercel's **Production** environment and redeploy:
 
-### How to Apply:
-1. Log in to your [Supabase Dashboard](https://supabase.com/).
-2. Select your project and navigate to the **SQL Editor** tab in the sidebar.
-3. Click **New Query** to open a blank SQL query window.
-4. Copy the complete SQL script from [supabase/schema.sql](file:///Users/tobz/Documents/invoice-generator/supabase/schema.sql) and paste it into the query window.
-5. Click **Run** to execute the script.
+```text
+VITE_API_BASE_URL=https://api.invoicely.online/api
+```
+
+Vite embeds `VITE_` variables in the browser bundle during the build. The API
+address is public configuration. Never put database credentials, signing secrets,
+or email-provider tokens in frontend environment variables. Configure the backend
+to allow the frontend origin and credentials; see the backend repository for setup.
 
 ---
 
@@ -117,7 +123,7 @@ invoice-generator/
 │   │   └── ui/             # Core shared reusable layouts
 │   ├── data/               # Static navigation configs
 │   ├── hooks/              # Custom context hooks (useTheme)
-│   ├── lib/                # Supabase configurations and bindings
+│   ├── lib/                # Axios API clients and Zod schemas
 │   ├── pages/
 │   │   ├── invoices/       # Invoice Index, Creator, and Detail pages
 │   │   ├── Clients.tsx     # Reusable Client Directory Page

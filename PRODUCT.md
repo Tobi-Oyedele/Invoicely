@@ -20,7 +20,7 @@ Free and deliberately minimal. Invoicely does invoices and the clients you send 
 
 ## Operating Context
 
-- Account flow: sign up, then sign in, with password reset (Supabase Auth).
+- Account flow: sign up, then sign in, with password reset through the Express API and HttpOnly login cookies.
 - Profile: personal info, business details, and payout/bank credentials. Payment details print on every invoice, and onboarding checks that they're complete.
 - Clients: create, edit, delete, and search a saved client directory (table on desktop, cards on mobile).
 - Invoices: list with search by invoice number or client, clickable status badges (`draft`, `sent`, `paid`), subtotals grouped by currency, and new, view, and edit pages.
@@ -28,9 +28,9 @@ Free and deliberately minimal. Invoicely does invoices and the clients you send 
 
 ## Capabilities and Constraints
 
-- Stack: React 19, TypeScript, Vite, Tailwind CSS 4, Supabase (auth + Postgres, `supabase/schema.sql`), `@react-pdf/renderer`, React Icons. Deployed on Vercel.
-- Currencies: NGN, USD, EUR, GBP, CAD (`src/lib/currency.ts`). Each user picks one currency in Profile (`profiles.default_currency`, default NGN). Every new invoice is issued in it and keeps it afterwards; there is no per-invoice or per-line-item currency choice.
-- Invoices get a per-client reference (first four letters of the client name + that client's count, e.g. `ACME-003`, via `src/lib/invoiceNumber.ts`), so a client never sees how many invoices the freelancer has issued overall. Older invoices keep their original `INV-###` numbers. Invoices also have an optional due date and line items (quantity × rate) with live totals.
+- Stack: React 19, TypeScript, Vite, Tailwind CSS 4, a separate Node.js/Express API with MongoDB/Mongoose, Axios, and Zod response validation, `@react-pdf/renderer`, React Icons. Deployed on Vercel.
+- Currencies: NGN, USD, EUR, GBP, CAD (`src/lib/currency.ts`). Each user picks one currency in Profile (`user.currency`, default NGN). Every new invoice is issued in it and keeps it afterwards; there is no per-invoice or per-line-item currency choice.
+- Invoices get a per-client reference (first four letters of the client name + that client's count, e.g. `ACME-003`, assigned by the backend using a reserved client code and a per-client counter), so a client never sees how many invoices the freelancer has issued overall. Older invoices keep their original `INV-###` numbers. Invoices also have an optional due date and line items (quantity × rate) with live totals.
 - Dark theme is the default; light is opt-in via a toggle.
 - The Settings route was removed. Profile holds account and business configuration.
 - Terminology: "invoice", "client", "line item", "draft / sent / paid", "payment details".

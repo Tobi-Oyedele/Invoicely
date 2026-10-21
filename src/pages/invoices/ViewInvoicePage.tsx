@@ -24,7 +24,7 @@ import type {
 import { LineItemsSection } from "../../components/invoices/LineItemsSection";
 import { InvoicePaymentInstructions } from "../../components/invoices/InvoicePaymentInstructions";
 import { StatusMarker } from "../../components/invoices/status";
-import { CURRENCIES, DEFAULT_CURRENCY } from "../../lib/currency";
+import { CURRENCIES } from "../../lib/currency";
 import { formatDate } from "../../utils/date";
 import { AuthField } from "../../components/auth/AuthField";
 import { FormAlert } from "../../components/auth/FormAlert";
@@ -76,7 +76,7 @@ const ViewInvoicePage = ({ defaultEditing = false, idOverride }: ViewInvoicePage
   const [dueDate, setDueDate] = useState("");
   const [selectedClientId, setSelectedClientId] = useState("");
   const [notes, setNotes] = useState("");
-  const [currency, setCurrency] = useState(DEFAULT_CURRENCY);
+  const [currency, setCurrency] = useState("");
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
 
   const fillForm = (inv: Invoice) => {
@@ -86,7 +86,7 @@ const ViewInvoicePage = ({ defaultEditing = false, idOverride }: ViewInvoicePage
     setSelectedClientId(inv.client_id || "");
     setNotes(inv.notes || "");
     setLineItems(inv.line_items || []);
-    setCurrency(inv.currency || DEFAULT_CURRENCY);
+    setCurrency(inv.currency);
   };
 
   /** `quiet` refreshes after a save without swapping the page for a skeleton. */
@@ -484,7 +484,7 @@ const ViewInvoicePage = ({ defaultEditing = false, idOverride }: ViewInvoicePage
   // READ-ONLY VIEW: the invoice as paper, mirroring the PDF
   const items = invoice.line_items || [];
   const total = items.reduce((sum, item) => sum + lineTotal(item), 0);
-  const code = invoice.currency || DEFAULT_CURRENCY;
+  const code = invoice.currency;
   const client = invoice.clients;
 
   return (

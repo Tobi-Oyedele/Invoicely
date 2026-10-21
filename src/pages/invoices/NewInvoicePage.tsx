@@ -13,7 +13,7 @@ import {
 } from "react-icons/fi";
 import { LineItemsSection } from "../../components/invoices/LineItemsSection";
 import type { LineItem } from "../../components/invoices/InvoicePDFDocument";
-import { CURRENCIES, DEFAULT_CURRENCY } from "../../lib/currency";
+import { CURRENCIES } from "../../lib/currency";
 import { AuthField } from "../../components/auth/AuthField";
 import { FormSection, Optional } from "../../components/ui/FormSection";
 import { SelectField } from "../../components/ui/SelectField";
@@ -32,7 +32,6 @@ interface Profile {
   country: string | null;
   bank_name: string | null;
   account_number: string | null;
-  default_currency: string | null;
 }
 
 const NewInvoicePage = () => {
@@ -57,7 +56,7 @@ const NewInvoicePage = () => {
   const [dueDate, setDueDate] = useState("");
   const [selectedClientId, setSelectedClientId] = useState("");
   const [notes, setNotes] = useState("");
-  const [currency, setCurrency] = useState(DEFAULT_CURRENCY);
+  const [currency, setCurrency] = useState("");
   const [lineItems, setLineItems] = useState<LineItem[]>([
     { description: "", quantity: 1, rate: 0 },
   ]);
@@ -77,7 +76,7 @@ const NewInvoicePage = () => {
         first_name: user.firstName, last_name: user.lastName, email: user.email,
         business_name: user.businessName ?? null, city: user.city ?? null,
         country: user.country ?? null, bank_name: user.paymentDetails?.bankName ?? null,
-        account_number: user.paymentDetails?.accountNumber ?? null, default_currency: user.currency,
+        account_number: user.paymentDetails?.accountNumber ?? null,
       });
       setCurrency(user.currency);
       setClients([...clientList].sort((a,b) => a.client_name.localeCompare(b.client_name)));

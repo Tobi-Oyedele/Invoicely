@@ -42,7 +42,7 @@ export interface Invoice {
   created_at: string;
   line_items: LineItem[];
   clients: Client | null;
-  currency?: string | null;
+  currency: string;
 }
 
 // React-PDF Styling Definition
@@ -206,7 +206,7 @@ interface InvoicePDFDocumentProps {
 
 export const InvoicePDFDocument = ({ invoice, sender }: InvoicePDFDocumentProps) => {
   const lineItems = invoice.line_items || [];
-  const currency = invoice.currency || "NGN";
+  const currency = invoice.currency;
 
   const formatPDFItemCurrency = (amount: number) => {
     return `${currency} ${amount.toFixed(2)}`;
