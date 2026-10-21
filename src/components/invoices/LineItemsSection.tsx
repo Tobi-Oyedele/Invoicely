@@ -42,7 +42,7 @@ export const LineItemsSection = ({
 }: LineItemsSectionProps) => {
   // The row added last takes focus so typing can continue straight away
   const [focusIndex, setFocusIndex] = useState<number | null>(null);
-  const code = currency || "NGN";
+  const code = currency;
 
   const total = lineItems.reduce(
     (sum, item) => sum + (item.quantity || 0) * (item.rate || 0),

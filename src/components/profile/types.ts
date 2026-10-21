@@ -27,7 +27,7 @@ export const EMPTY_PROFILE: ProfileValues = {
   routingNumber: "",
   swiftCode: "",
   bankAddress: "",
-  currency: "NGN",
+  currency: "",
 };
 
 export interface ProfileSectionProps {

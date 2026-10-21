@@ -10,5 +10,3 @@ export const CURRENCIES: CurrencyOption[] = [
   { code: "GBP", symbol: "£" },
   { code: "CAD", symbol: "CA$" },
 ];
-
-export const DEFAULT_CURRENCY = "NGN";
