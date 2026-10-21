@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { supabase } from "../../lib/supabase";
+import { getInvoice, invoiceToView } from "../../lib/invoices.api";
+import { getCurrentUser } from "../../lib/api";
+import { updateInvoice } from "../../lib/invoices.api";
+import { invoiceEditInputSchema } from "../../lib/schema";
+
 import {
   FiAlertCircle,
   FiArrowLeft,
@@ -14,7 +18,6 @@ import { pdf } from "@react-pdf/renderer";
 import { InvoicePDFDocument } from "../../components/invoices/InvoicePDFDocument";
 import type {
   LineItem,
-  Client,
   Profile,
   Invoice,
 } from "../../components/invoices/InvoicePDFDocument";
@@ -59,14 +62,13 @@ const ViewInvoicePage = ({ defaultEditing = false, idOverride }: ViewInvoicePage
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [downloadError, setDownloadError] = useState<string | null>(null);
   const [justSaved, setJustSaved] = useState(false);
-  const [clientError, setClientError] = useState<string | null>(null);
+  const [issueDateError, setIssueDateError] = useState<string | null>(null);
   const [dueDateError, setDueDateError] = useState<string | null>(null);
   const [showItemErrors, setShowItemErrors] = useState(false);
 
   // Loaded database schemas
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [sender, setSender] = useState<Profile | null>(null);
-  const [clients, setClients] = useState<Client[]>([]);
 
   // Form states (prefilled on load and reset on cancel)
   const [invoiceNumber, setInvoiceNumber] = useState("");
@@ -96,48 +98,27 @@ const ViewInvoicePage = ({ defaultEditing = false, idOverride }: ViewInvoicePage
       setLoadError(null);
       setNotFound(false);
 
-      // 1. Fetch invoice row with client and line items
-      const { data: invData, error: invError } = await supabase
-        .from("invoices")
-        .select(`
-          *,
-          line_items (*),
-          clients (*)
-        `)
-        .eq("id", id)
-        .maybeSingle();
-
-      if (invError) throw invError;
-      if (!invData) {
+      const data = await getInvoice(id);
+      if (!data) {
         setNotFound(true);
         return;
       }
-
+      const invData = invoiceToView(data);
       setInvoice(invData);
       fillForm(invData);
 
-      // 2. Fetch sender profile details (using invoice.user_id)
-      const { data: profileData, error: profileError } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", invData.user_id)
-        .maybeSingle();
-
-      if (profileError) throw profileError;
-      if (!profileData) {
-        throw new Error("Your profile couldn't be found. Add your details in Profile, then try again.");
-      }
-      setSender(profileData);
-
-      // 3. Fetch user's clients list (needed for edit mode)
-      const { data: clientsData, error: clientsError } = await supabase
-        .from("clients")
-        .select("id, client_name")
-        .eq("user_id", invData.user_id)
-        .order("client_name", { ascending: true });
-
-      if (clientsError) throw clientsError;
-      setClients(clientsData || []);
+      // Sender identity/location come from the saved invoice, not today's profile.
+      const user = await getCurrentUser();
+      if (!user) throw new Error("Your session has expired. Sign in again.");
+      const bank = user.paymentDetails;
+      setSender({
+        first_name: null, last_name: null, business_name: data.from.name,
+        email: data.from.email, city: data.from.location ?? null, country: null,
+        bank_name: bank?.bankName ?? null, account_number: bank?.accountNumber ?? null,
+        account_name: bank?.accountHolderName ?? null, account_type: bank?.accountType,
+        routing_number: bank?.routingSortCode, swift_code: bank?.swiftBicCode,
+        bank_address: bank?.bankBranchAddress,
+      });
     } catch (err) {
       const error = err as Error;
       console.error("Error loading invoice details:", error);
@@ -200,7 +181,7 @@ const ViewInvoicePage = ({ defaultEditing = false, idOverride }: ViewInvoicePage
   const leaveEditMode = () => {
     setIsEditing(false);
     setErrorMsg(null);
-    setClientError(null);
+    setIssueDateError(null);
     setDueDateError(null);
     setShowItemErrors(false);
     // Opened from the /edit route: return to the invoice's own address
@@ -219,87 +200,38 @@ const ViewInvoicePage = ({ defaultEditing = false, idOverride }: ViewInvoicePage
     if (!id || !invoice) return;
     setErrorMsg(null);
 
-    const itemsInvalid = lineItems.some(
-      (item) => !item.description.trim() || !(item.quantity > 0) || item.rate < 0,
-    );
-    const dueBeforeIssue = Boolean(dueDate && issueDate && dueDate < issueDate);
+    if (invoice.status !== "draft") {
+      setErrorMsg("Only draft invoices can be edited.");
+      return;
+    }
 
-    setClientError(selectedClientId ? null : "Choose who this invoice is for.");
-    setDueDateError(dueBeforeIssue ? "The due date can't be before the issue date." : null);
-    setShowItemErrors(itemsInvalid);
-
-    if (!selectedClientId || dueBeforeIssue || itemsInvalid) {
-      setErrorMsg(
-        itemsInvalid
-          ? "Every line item needs a description and a quantity above zero."
-          : "Fix the highlighted fields to save your changes.",
-      );
+    const checked = invoiceEditInputSchema.safeParse({
+      issueDate,
+      dueDate: dueDate || null,
+      notes,
+      lineItems: lineItems.map(item => ({description: item.description, quantity: item.quantity, rate: item.rate})),
+    });
+    setIssueDateError(null);
+    setDueDateError(null);
+    setShowItemErrors(false);
+    if (!checked.success) {
+      const issues = checked.error.issues;
+      setIssueDateError(issues.find(issue => issue.path[0] === "issueDate")?.message ?? null);
+      setDueDateError(issues.find(issue => issue.path[0] === "dueDate")?.message ?? null);
+      setShowItemErrors(issues.some(issue => issue.path[0] === "lineItems"));
+      setErrorMsg(issues[0]?.message ?? "Check the highlighted fields.");
       return;
     }
 
     try {
       setSubmitting(true);
-
-      // 1. Update parent invoice metadata details
-      const { error: invoiceError } = await supabase
-        .from("invoices")
-        .update({
-          client_id: selectedClientId,
-          invoice_number: invoiceNumber.trim(),
-          issue_date: issueDate,
-          due_date: dueDate || null,
-          notes: notes.trim() || null,
-        })
-        .eq("id", id);
-
-      if (invoiceError) throw invoiceError;
-
-      // 2. Safely synchronize dynamic line items
-      // Gather the IDs of the existing line items currently in the database
-      const existingLineItemIds = (invoice.line_items || [])
-        .map((item) => item.id)
-        .filter((itemId): itemId is string => !!itemId);
-
-      // Prepare new list of items to insert
-      const itemsToInsert = lineItems.map((item) => ({
-        invoice_id: id,
-        description: item.description.trim(),
-        quantity: item.quantity,
-        rate: item.rate,
-      }));
-
-      // Insert the new line items first
-      const { data: insertedData, error: insertError } = await supabase
-        .from("line_items")
-        .insert(itemsToInsert)
-        .select("id");
-
-      if (insertError) throw insertError;
-
-      // Only if the insert succeeded, we proceed to delete the old items
-      if (existingLineItemIds.length > 0) {
-        const { error: deleteError } = await supabase
-          .from("line_items")
-          .delete()
-          .in("id", existingLineItemIds);
-
-        if (deleteError) {
-          // Compensating action: If delete of old items failed, roll back the newly inserted items
-          if (insertedData && insertedData.length > 0) {
-            const newlyInsertedIds = insertedData.map((item) => item.id);
-            await supabase.from("line_items").delete().in("id", newlyInsertedIds);
-          }
-          throw deleteError;
-        }
-      }
-
-      await fetchInvoiceDetails(true);
+      const saved = invoiceToView(await updateInvoice(id, checked.data));
+      setInvoice(saved);
+      fillForm(saved);
       leaveEditMode();
       setJustSaved(true);
-    } catch (err) {
-      const error = err as Error;
-      console.error("Error saving changes:", error);
-      setErrorMsg(error.message || "Your changes weren't saved. Try again.");
+    } catch (err: unknown) {
+      setErrorMsg(err instanceof Error ? err.message : "Your changes weren't saved. Try again.");
     } finally {
       setSubmitting(false);
     }
@@ -397,6 +329,17 @@ const ViewInvoicePage = ({ defaultEditing = false, idOverride }: ViewInvoicePage
   const senderPlace = [sender.city, sender.country].filter(Boolean).join(", ");
 
   // EDIT MODE
+  if (isEditing && invoice.status !== "draft") {
+    return (
+      <main className="py-6 px-4 lg:py-10 lg:px-8 max-w-4xl mx-auto">
+        {backLink}
+        <h1 className="text-xl font-semibold">Only draft invoices can be edited</h1>
+        <p className="mt-2 text-sm text-fg-muted">This invoice has already been issued. Its details are preserved.</p>
+        <button type="button" onClick={cancelEditing} className="mt-4 underline cursor-pointer">View invoice</button>
+      </main>
+    );
+  }
+
   if (isEditing) {
     return (
       <main className="pt-6 px-4 lg:pt-10 lg:px-8 max-w-4xl mx-auto text-fg selection:bg-line-strong">
@@ -428,24 +371,8 @@ const ViewInvoicePage = ({ defaultEditing = false, idOverride }: ViewInvoicePage
 
             <FormSection title="Bill to">
               <div className="sm:max-w-sm">
-                <SelectField
-                  label="Client"
-                  value={selectedClientId}
-                  error={clientError}
-                  disabled={submitting}
-                  onChange={(e) => {
-                    setSelectedClientId(e.target.value);
-                    if (e.target.value) setClientError(null);
-                  }}
-                >
-                  <option value="" disabled>
-                    Choose a client
-                  </option>
-                  {clients.map((client) => (
-                    <option key={client.id} value={client.id}>
-                      {client.client_name}
-                    </option>
-                  ))}
+                <SelectField label="Client" value={selectedClientId} disabled>
+                  <option value={selectedClientId}>{invoice.clients?.client_name ?? "Saved client"}</option>
                 </SelectField>
               </div>
             </FormSection>
@@ -471,7 +398,11 @@ const ViewInvoicePage = ({ defaultEditing = false, idOverride }: ViewInvoicePage
                   type="date"
                   disabled={submitting}
                   value={issueDate}
-                  onChange={(e) => setIssueDate(e.target.value)}
+                  error={issueDateError}
+                  onChange={(e) => {
+                    setIssueDate(e.target.value);
+                    setIssueDateError(null);
+                  }}
                   className="tabular-nums"
                 />
 
@@ -579,7 +510,8 @@ const ViewInvoicePage = ({ defaultEditing = false, idOverride }: ViewInvoicePage
             <button
               type="button"
               onClick={() => setIsEditing(true)}
-              disabled={downloading}
+              disabled={downloading || invoice.status !== "draft"}
+              title={invoice.status !== "draft" ? "Only draft invoices can be edited" : undefined}
               className="inline-flex flex-1 items-center justify-center gap-2 rounded-md border border-line-strong px-3.5 py-2.5 text-sm font-medium text-fg transition-colors hover:border-fg-subtle hover:bg-surface cursor-pointer disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg-muted sm:flex-none"
             >
               <FiEdit2 className="size-3.5" />

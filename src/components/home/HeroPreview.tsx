@@ -62,7 +62,6 @@ const HeroPreview = () => {
       const due = new Date(Date.now() + 14 * 864e5).toISOString().slice(0, 10);
       const invoice: Invoice = {
         id: "preview",
-        user_id: "preview",
         client_id: "preview",
         invoice_number: "LEKK-003",
         issue_date: today,

@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { AuthContext } from "../../auth/AuthContext";
-import type { AuthUser } from "../../lib/schema";
-import { getCurrentUser, login, logout } from "../../lib/api";
+import type { AuthUser, RegisterInput } from "../../lib/schema";
+import { getCurrentUser, login, logout, register } from "../../lib/api";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -67,6 +67,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError(null);
   }
 
+  async function signUp(input: RegisterInput): Promise<void> {
+    await register(input);
+    // Use the new cookie to load the same full profile as sign-in.
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error("Your account was created, but login could not be confirmed. Please sign in.");
+    }
+    setUser(currentUser);
+    setError(null);
+  }
+
   async function signOut(): Promise<void> {
     // Clear local state only after the server clears the cookie.
     // Failures propagate to the caller so it can offer another attempt.
@@ -77,7 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, error, signIn, signOut, retry }}
+      value={{ user, loading, error, signIn, signUp, signOut, retry }}
     >
       {children}
     </AuthContext.Provider>

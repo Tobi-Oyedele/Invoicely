@@ -100,7 +100,7 @@ export const SignUpForm = ({
         onChange={(e) => setPassword(e.target.value)}
         onBlur={touch("password")}
         error={shown("password")}
-        placeholder="At least 6 characters"
+        placeholder="At least 8 characters"
       />
       <div className="pt-2">
         <SubmitButton loading={loading} loadingLabel="Creating account">
