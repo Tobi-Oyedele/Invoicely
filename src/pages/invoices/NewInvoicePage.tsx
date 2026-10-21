@@ -1,6 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { supabase } from "../../lib/supabase";
+import { getCurrentUser } from "../../lib/api";
+import { getClients } from "../../lib/clients.api";
+import { createInvoice } from "../../lib/invoices.api";
+import { invoiceCreateInputSchema } from "../../lib/schema";
 import {
   FiArrowLeft,
   FiArrowRight,
@@ -11,7 +14,6 @@ import {
 import { LineItemsSection } from "../../components/invoices/LineItemsSection";
 import type { LineItem } from "../../components/invoices/InvoicePDFDocument";
 import { CURRENCIES, DEFAULT_CURRENCY } from "../../lib/currency";
-import { bumpInvoiceNumber, nextInvoiceNumber } from "../../lib/invoiceNumber";
 import { AuthField } from "../../components/auth/AuthField";
 import { FormSection, Optional } from "../../components/ui/FormSection";
 import { SelectField } from "../../components/ui/SelectField";
@@ -40,6 +42,7 @@ const NewInvoicePage = () => {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [clientError, setClientError] = useState<string | null>(null);
+  const [issueDateError, setIssueDateError] = useState<string | null>(null);
   const [dueDateError, setDueDateError] = useState<string | null>(null);
   const [showItemErrors, setShowItemErrors] = useState(false);
 
@@ -48,8 +51,6 @@ const NewInvoicePage = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
 
   // Form state fields
-  // Every reference this user has issued; the next one is derived per client
-  const [existingNumbers, setExistingNumbers] = useState<string[]>([]);
   const [issueDate, setIssueDate] = useState(
     () => new Date().toISOString().split("T")[0],
   );
@@ -70,50 +71,16 @@ const NewInvoicePage = () => {
       setLoading(true);
       setLoadError(null);
 
-      const {
-        data: { user },
-        error: authError,
-      } = await supabase.auth.getUser();
-
-      if (authError || !user) {
-        throw new Error("Your session has expired. Sign in again to create an invoice.");
-      }
-
-      // 1. Fetch user profile
-      const { data: profileData, error: profileError } = await supabase
-        .from("profiles")
-        .select(
-          "first_name, last_name, email, business_name, city, country, bank_name, account_number, default_currency",
-        )
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (profileError) throw profileError;
-      setProfile(profileData);
-      // Invoices are issued in the currency set on the profile
-      setCurrency(profileData?.default_currency || DEFAULT_CURRENCY);
-
-      // 2. Fetch user's clients
-      const { data: clientsData, error: clientsError } = await supabase
-        .from("clients")
-        .select("id, client_name")
-        .eq("user_id", user.id)
-        .order("client_name", { ascending: true });
-
-      if (clientsError) throw clientsError;
-      setClients(clientsData || []);
-
-      // 3. Query existing invoices to suggest next number
-      const { data: invoicesData, error: invoicesError } = await supabase
-        .from("invoices")
-        .select("invoice_number")
-        .eq("user_id", user.id);
-
-      if (invoicesError) throw invoicesError;
-
-      setExistingNumbers(
-        (invoicesData || []).map((inv) => inv.invoice_number).filter(Boolean),
-      );
+      const [user, clientList] = await Promise.all([getCurrentUser(), getClients()]);
+      if (!user) throw new Error("Your session has expired. Sign in again to create an invoice.");
+      setProfile({
+        first_name: user.firstName, last_name: user.lastName, email: user.email,
+        business_name: user.businessName ?? null, city: user.city ?? null,
+        country: user.country ?? null, bank_name: user.paymentDetails?.bankName ?? null,
+        account_number: user.paymentDetails?.accountNumber ?? null, default_currency: user.currency,
+      });
+      setCurrency(user.currency);
+      setClients([...clientList].sort((a,b) => a.client_name.localeCompare(b.client_name)));
     } catch (err) {
       const error = err as Error;
       console.error("Error fetching compose data:", error);
@@ -134,13 +101,6 @@ const NewInvoicePage = () => {
       clearTimeout(timer);
     };
   }, [fetchComposeData]);
-
-  // Reference for this invoice: per client, so it never reveals the overall count
-  const selectedClientName = clients.find((c) => c.id === selectedClientId)?.client_name;
-  const invoiceNumber = useMemo(
-    () => (selectedClientName ? nextInvoiceNumber(selectedClientName, existingNumbers) : ""),
-    [selectedClientName, existingNumbers],
-  );
 
   // Line item manipulation handlers
   const handleLineItemChange = (
@@ -176,139 +136,33 @@ const NewInvoicePage = () => {
     e.preventDefault();
     setErrorMsg(null);
 
-    const itemsInvalid = lineItems.some(
-      (item) => !item.description.trim() || !(item.quantity > 0) || item.rate < 0,
-    );
-    const dueBeforeIssue = Boolean(dueDate && issueDate && dueDate < issueDate);
-
-    setClientError(selectedClientId ? null : "Choose who this invoice is for.");
-    setDueDateError(dueBeforeIssue ? "The due date can't be before the issue date." : null);
-    setShowItemErrors(itemsInvalid);
-
-    if (!selectedClientId || dueBeforeIssue || itemsInvalid) {
-      setErrorMsg(
-        itemsInvalid
-          ? "Every line item needs a description and a quantity above zero."
-          : "Fix the highlighted fields to save this invoice.",
-      );
+    const checked = invoiceCreateInputSchema.safeParse({
+      clientId: selectedClientId,
+      issueDate,
+      dueDate: dueDate || undefined,
+      notes,
+      lineItems: lineItems.map(item => ({description:item.description,quantity:item.quantity,rate:item.rate})),
+    });
+    setClientError(null);
+    setIssueDateError(null);
+    setDueDateError(null);
+    setShowItemErrors(false);
+    if (!checked.success) {
+      const issues = checked.error.issues;
+      setClientError(issues.find(issue => issue.path[0] === "clientId")?.message ?? null);
+      setIssueDateError(issues.find(issue => issue.path[0] === "issueDate")?.message ?? null);
+      setDueDateError(issues.find(issue => issue.path[0] === "dueDate")?.message ?? null);
+      setShowItemErrors(issues.some(issue => issue.path[0] === "lineItems"));
+      setErrorMsg(issues[0]?.message ?? "Check the highlighted fields.");
       return;
     }
-
     try {
       setSubmitting(true);
-      setErrorMsg(null);
-
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) throw new Error("Your session has expired. Sign in again to save this invoice.");
-
-      // 1. Insert into invoices table with auto-increment retry on unique violations
-      let currentInvoiceNumber = invoiceNumber.trim();
-      let savedSuccessfully = false;
-      let invoiceResult: { id: string } | null = null;
-      let invoiceError: { code?: string; message: string } | null = null;
-      let attempts = 0;
-      const maxAttempts = 10;
-
-      while (!savedSuccessfully && attempts < maxAttempts) {
-        attempts++;
-
-        // Active check to prevent duplicates even if the DB lacks a unique constraint
-        const { data: duplicateCheck, error: checkError } = await supabase
-          .from("invoices")
-          .select("id")
-          .eq("user_id", user.id)
-          .eq("invoice_number", currentInvoiceNumber)
-          .maybeSingle();
-
-        if (checkError) {
-          invoiceError = checkError;
-          break;
-        }
-
-        if (duplicateCheck) {
-          // Collision found! Auto-increment the invoice number and retry
-          currentInvoiceNumber = bumpInvoiceNumber(currentInvoiceNumber);
-          continue;
-        }
-
-        const { data, error } = await supabase
-          .from("invoices")
-          .insert({
-            user_id: user.id,
-            client_id: selectedClientId,
-            invoice_number: currentInvoiceNumber,
-            issue_date: issueDate,
-            due_date: dueDate || null,
-            notes: notes.trim() || null,
-            status: "draft", // Defaults to draft
-            currency,
-          })
-          .select()
-          .single();
-
-        if (error) {
-          if (
-            error.code === "23505" ||
-            (error.message && error.message.toLowerCase().includes("duplicate"))
-          ) {
-            // Uniqueness collision in database (race condition)! Auto-increment and retry
-            currentInvoiceNumber = bumpInvoiceNumber(currentInvoiceNumber);
-            continue;
-          } else {
-            invoiceError = error;
-            break;
-          }
-        } else {
-          invoiceResult = data;
-          savedSuccessfully = true;
-        }
-      }
-
-      if (invoiceError) throw invoiceError;
-      if (!savedSuccessfully || !invoiceResult) {
-        throw new Error(
-          "Failed to generate a unique invoice number after several attempts. Please try again.",
-        );
-      }
-
-      // 2. Insert dynamic line items tied to invoice ID
-      const itemsToInsert = lineItems.map((item) => ({
-        invoice_id: invoiceResult.id,
-        description: item.description.trim(),
-        quantity: item.quantity,
-        rate: item.rate,
-      }));
-
-      const { error: linesError } = await supabase
-        .from("line_items")
-        .insert(itemsToInsert);
-
-      if (linesError) {
-        // Safe compensating delete to prevent orphaned invoices
-        const { error: rollbackError } = await supabase
-          .from("invoices")
-          .delete()
-          .eq("id", invoiceResult.id);
-
-        if (rollbackError) {
-          throw new Error(
-            `Failed to save line items (${linesError.message}) and failed to roll back orphaned invoice (${rollbackError.message}). Please contact support.`,
-          );
-        }
-        throw linesError;
-      }
-
-      // Success - Redirect to invoice details page
-      navigate(`/invoices/${invoiceResult.id}`);
-    } catch (err) {
-      const error = err as Error;
-      console.error("Error saving invoice:", error);
-      setErrorMsg(
-        error.message || "The invoice wasn't saved. Try again.",
-      );
+      // Express assigns the number and saves snapshots and line items.
+      const invoice = await createInvoice(checked.data);
+      navigate(`/invoices/${invoice.id}`);
+    } catch (err: unknown) {
+      setErrorMsg(err instanceof Error ? err.message : "The invoice wasn't saved. Try again.");
     } finally {
       setSubmitting(false);
     }
@@ -474,7 +328,7 @@ const NewInvoicePage = () => {
               <div>
                 <span className="mb-1.5 block text-sm font-medium text-fg">Invoice number</span>
                 <p className="flex h-[42px] items-center rounded-md border border-line bg-canvas px-3 font-mono text-sm tabular-nums text-fg-muted">
-                  {invoiceNumber || <span className="text-fg-subtle">Choose a client</span>}
+                  <span className="text-fg-subtle">Assigned when saved</span>
                 </p>
               </div>
 
@@ -490,7 +344,11 @@ const NewInvoicePage = () => {
                 type="date"
                 disabled={submitting}
                 value={issueDate}
-                onChange={(e) => setIssueDate(e.target.value)}
+                error={issueDateError}
+                onChange={(e) => {
+                  setIssueDate(e.target.value);
+                  setIssueDateError(null);
+                }}
                 className="tabular-nums"
               />
 

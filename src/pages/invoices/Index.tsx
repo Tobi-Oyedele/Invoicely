@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { supabase } from "../../lib/supabase";
+import { getInvoices, invoiceToView, updateInvoiceStatus, deleteInvoice } from "../../lib/invoices.api";
+import { getCurrentUser } from "../../lib/api";
 import { formatDate } from "../../utils/date";
 import { FormAlert } from "../../components/auth/FormAlert";
 import { Dialog } from "../../components/ui/Dialog";
@@ -25,32 +26,8 @@ import {
   FiRefreshCw,
 } from "react-icons/fi";
 
-interface LineItem {
-  id: string;
-  invoice_id: string;
-  description: string;
-  quantity: number;
-  rate: number;
-}
-
-interface Client {
-  client_name: string;
-}
-
-interface Invoice {
-  id: string;
-  user_id: string;
-  client_id: string;
-  invoice_number: string;
-  issue_date: string;
-  due_date: string;
-  status: InvoiceStatus;
-  notes?: string;
-  created_at: string;
-  line_items: LineItem[];
-  clients: Client | null;
-  currency?: string | null;
-}
+type Invoice = ReturnType<typeof invoiceToView>;
+type LineItem = Invoice["line_items"][number];
 
 const menuItemClass =
   "w-full flex items-center gap-2.5 px-3 py-2 text-left text-sm text-fg-muted hover:text-fg hover:bg-surface focus-visible:bg-surface focus-visible:text-fg focus-visible:outline-none transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed";
@@ -78,33 +55,15 @@ const InvoicesPage = () => {
   const [statusSelectorPosition, setStatusSelectorPosition] = useState<{ top: number; right: number } | null>(null);
 
   // Confirmation modal states
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [invoiceToDelete, setInvoiceToDelete] = useState<Invoice | null>(null);
 
   const fetchInvoices = async () => {
     try {
       setLoading(true);
       setLoadError(null);
-      const {
-        data: { user },
-        error: authError,
-      } = await supabase.auth.getUser();
-
-      if (authError || !user) {
-        throw new Error("Your session has expired. Sign in again to see your invoices.");
-      }
-
-      const { data, error: dbError } = await supabase
-        .from("invoices")
-        .select(`
-          *,
-          line_items (*),
-          clients (client_name)
-        `)
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-
-      if (dbError) throw dbError;
-      setInvoices(data || []);
+      const data = await getInvoices();
+      setInvoices(data.map(invoiceToView));
     } catch (err) {
       const error = err as Error;
       console.error("Error fetching invoices:", error);
@@ -130,29 +89,11 @@ const InvoicesPage = () => {
   useEffect(() => {
     const checkProfileStatus = async () => {
       try {
-        const {
-          data: { user },
-          error: authError,
-        } = await supabase.auth.getUser();
-
-        if (authError || !user) return;
-
-        const { data: profile, error: dbError } = await supabase
-          .from("profiles")
-          .select("bank_name, account_number")
-          .eq("id", user.id)
-          .maybeSingle();
-
-        if (dbError) throw dbError;
-
-        const missing = [];
-        if (!profile) {
-          missing.push("bank name", "account number");
-        } else {
-          if (!profile.bank_name) missing.push("bank name");
-          if (!profile.account_number) missing.push("account number");
-        }
-
+        const user = await getCurrentUser();
+        if (!user) return;
+        const missing: string[] = [];
+        if (!user.paymentDetails?.bankName) missing.push("bank name");
+        if (!user.paymentDetails?.accountNumber) missing.push("account number");
         setMissingFields(missing);
       } catch (err) {
         console.error("Error checking profile status in invoices page:", err);
@@ -194,17 +135,8 @@ const InvoicesPage = () => {
     try {
       setSubmitting(true);
       setActionError(null);
-      const { error } = await supabase
-        .from("invoices")
-        .update({ status: newStatus })
-        .eq("id", invoiceId);
-
-      if (error) throw error;
-
-      // Update local state dynamically
-      setInvoices((prev) =>
-        prev.map((inv) => (inv.id === invoiceId ? { ...inv, status: newStatus } : inv))
-      );
+      const saved = invoiceToView(await updateInvoiceStatus(invoiceId, newStatus));
+      setInvoices(prev => prev.map(inv => inv.id === invoiceId ? saved : inv));
       closeMenus();
     } catch (err) {
       const error = err as Error;
@@ -217,29 +149,20 @@ const InvoicesPage = () => {
   };
 
   const handleDeleteInvoice = async () => {
-    if (!invoiceToDelete) return;
-
+    if (!invoiceToDelete || submitting) return;
+    if (invoiceToDelete.status !== "draft") {
+      setDeleteError("Only draft invoices can be deleted.");
+      return;
+    }
     try {
       setSubmitting(true);
-      setActionError(null);
-
-      // Deleting cascade should ideally handle line_items automatically in standard Supabase relations.
-      // But we double check and handle deletion safely.
-      const { error } = await supabase
-        .from("invoices")
-        .delete()
-        .eq("id", invoiceToDelete.id);
-
-      if (error) throw error;
-
-      // Filter locally
-      setInvoices((prev) => prev.filter((inv) => inv.id !== invoiceToDelete.id));
+      setDeleteError(null);
+      await deleteInvoice(invoiceToDelete.id);
+      // Keep the row unless the backend confirms deletion.
+      setInvoices(prev => prev.filter(inv => inv.id !== invoiceToDelete.id));
       setInvoiceToDelete(null);
-    } catch (err) {
-      const error = err as Error;
-      console.error("Error deleting invoice:", error);
-      setActionError(error.message || "The invoice wasn't deleted. Try again.");
-      setInvoiceToDelete(null);
+    } catch (error: unknown) {
+      setDeleteError(error instanceof Error ? error.message : "The invoice wasn't deleted. Try again.");
     } finally {
       setSubmitting(false);
     }
@@ -585,9 +508,12 @@ const InvoicesPage = () => {
               role="menuitem"
               onClick={(e) => {
                 e.stopPropagation();
+                setDeleteError(null);
                 setInvoiceToDelete(selectedMenuInvoice);
                 closeMenus();
               }}
+              disabled={submitting || selectedMenuInvoice.status !== "draft"}
+              title={selectedMenuInvoice.status !== "draft" ? "Only draft invoices can be deleted" : undefined}
               className={`${menuItemClass} text-danger! hover:bg-danger-bg! focus-visible:bg-danger-bg!`}
             >
               <FiTrash2 className="size-3.5 shrink-0" />
@@ -615,7 +541,7 @@ const InvoicesPage = () => {
                   role="menuitemradio"
                   aria-checked={current}
                   autoFocus={i === 0}
-                  disabled={submitting}
+                  disabled={submitting || (!current && (status === "draft" || selectedStatusInvoice.status === "paid" || (selectedStatusInvoice.status !== "draft" && status !== "paid")))}
                   onClick={(e) => {
                     e.stopPropagation();
                     if (current) closeMenus();
@@ -652,6 +578,9 @@ const InvoicesPage = () => {
               This permanently removes the invoice and all of its line items. It can't be undone.
             </p>
 
+            <div className="mt-4">
+              <FormAlert kind="error" message={deleteError} />
+            </div>
             <div className="mt-6 flex justify-end gap-2">
               <button
                 type="button"
@@ -664,7 +593,7 @@ const InvoicesPage = () => {
               </button>
               <button
                 type="button"
-                disabled={submitting}
+                disabled={submitting || invoiceToDelete.status !== "draft"}
                 onClick={handleDeleteInvoice}
                 className="inline-flex items-center justify-center gap-2 rounded-md bg-danger px-3.5 py-2 text-sm font-medium text-canvas transition hover:opacity-90 active:scale-[0.98] cursor-pointer disabled:opacity-60 disabled:cursor-wait focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger"
               >

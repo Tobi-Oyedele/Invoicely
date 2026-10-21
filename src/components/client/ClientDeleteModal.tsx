@@ -7,7 +7,7 @@ interface ClientDeleteModalProps {
   isOpen: boolean;
   onClose: () => void;
   selectedClient: Client | null;
-  /** Invoices billed to this client; null while counting. */
+  /** Count supplied by the backend if it rejects deletion; null before attempting. */
   invoiceCount: number | null;
   submitting: boolean;
   actionError: string | null;
@@ -25,9 +25,8 @@ export const ClientDeleteModal = ({
 }: ClientDeleteModalProps) => {
   if (!selectedClient) return null;
 
-  const counting = invoiceCount === null;
   // Invoices reference their client without cascading, so a client with invoices can't be deleted
-  const blocked = !counting && invoiceCount > 0;
+  const blocked = invoiceCount !== null && invoiceCount > 0;
   const invoiceLabel = `${invoiceCount} ${invoiceCount === 1 ? "invoice" : "invoices"}`;
 
   return (
@@ -52,14 +51,10 @@ export const ClientDeleteModal = ({
           id="delete-client-body"
           className="mt-2 text-sm text-fg-muted leading-relaxed wrap-break-word"
         >
-          {counting ? (
-            "Checking for invoices billed to this client…"
-          ) : blocked ? (
+          {blocked ? (
             <>
               <span className="font-medium text-fg">{invoiceLabel}</span>{" "}
-              {invoiceCount === 1 ? "is" : "are"} billed to this client. Delete{" "}
-              {invoiceCount === 1 ? "it" : "them"} first, then you can delete
-              the client.
+              {invoiceCount === 1 ? "is" : "are"} billed to this client. This client cannot be deleted while linked to invoices.
             </>
           ) : (
             "This removes the client from your list. It can't be undone."
@@ -85,7 +80,7 @@ export const ClientDeleteModal = ({
           {!blocked && (
             <button
               type="button"
-              disabled={submitting || counting}
+              disabled={submitting}
               onClick={onDeleteConfirm}
               className="inline-flex items-center justify-center gap-2 rounded-md bg-danger px-3.5 py-2 text-sm font-medium text-canvas transition hover:opacity-90 active:scale-[0.98] cursor-pointer disabled:opacity-60 disabled:cursor-wait focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger"
             >

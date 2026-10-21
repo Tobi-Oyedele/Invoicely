@@ -33,12 +33,11 @@ export interface Profile {
 
 export interface Invoice {
   id: string;
-  user_id: string;
   client_id: string;
   invoice_number: string;
   issue_date: string;
   due_date: string;
-  status: "draft" | "sent" | "paid";
+  status: "draft" | "sent" | "paid" | "overdue";
   notes: string | null;
   created_at: string;
   line_items: LineItem[];

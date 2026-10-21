@@ -1,31 +1,13 @@
 import { useEffect, useState } from "react";
 import { Outlet, Navigate } from "react-router-dom";
-import type { Session } from "@supabase/supabase-js";
-import { supabase } from "../../lib/supabase";
+import { useAuth } from "../../hooks/useAuth";
 import { FiMenu } from "react-icons/fi";
 import Sidebar from "../dashboard/Sidebar";
 import { Logo } from "../brand/Logo";
 
 const DashboardLayout = () => {
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { user, loading, error, retry } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setLoading(false);
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
 
   useEffect(() => {
     if (!isSidebarOpen) return;
@@ -63,7 +45,18 @@ const DashboardLayout = () => {
     );
   }
 
-  if (!session) {
+  if (error) {
+    return (
+      <div className="min-h-screen bg-canvas text-fg flex flex-col items-center justify-center gap-4 p-6">
+        <p role="alert">We couldn't check your login. Please try again.</p>
+        <button type="button" onClick={() => void retry()} className="rounded-md border border-line-strong px-4 py-2 cursor-pointer">
+          Try again
+        </button>
+      </div>
+    );
+  }
+
+  if (!user) {
     return <Navigate to="/sign-in" replace />;
   }
 

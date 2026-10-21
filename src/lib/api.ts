@@ -2,10 +2,15 @@ import axios from "axios";
 import { http } from "./http";
 import {
   loginResponseSchema,
+  registerInputSchema,
+  forgotPasswordInputSchema,
+  resetPasswordInputSchema,
+  passwordResetResponseSchema,
+  registerResponseSchema,
   errorResponseSchema,
   meResponseSchema,
 } from "./schema";
-import type { AuthUser, LoginResponse } from "./schema";
+import type { AuthUser, LoginResponse, RegisterInput, RegisterResponse } from "./schema";
 
 export async function login(
   email: string,
@@ -84,4 +89,61 @@ export async function logout(): Promise<void> {
     }
     throw error;
   }
+}
+
+export async function register(input: RegisterInput): Promise<RegisterResponse> {
+  const parsed = registerInputSchema.safeParse(input);
+  if (!parsed.success) {
+    throw new Error(parsed.error.issues[0].message);
+  }
+
+  try {
+    // Express creates the user and sets the login cookie in one request.
+    const response = await http.post<unknown>("/auth/register", parsed.data);
+    const result = registerResponseSchema.safeParse(response.data);
+    if (!result.success) {
+      throw new Error("The server returned an unexpected registration response.");
+    }
+    return result.data;
+  } catch (error: unknown) {
+    if (axios.isAxiosError<unknown>(error)) {
+      const result = errorResponseSchema.safeParse(error.response?.data);
+      throw new Error(
+        result.success
+          ? result.data.message
+          : error.response
+            ? "Unable to create your account. Please try again."
+            : "Unable to reach the server. Please try again.",
+        { cause: error },
+      );
+    }
+    throw error;
+  }
+}
+
+async function passwordResetRequest(path: string, input: unknown): Promise<string> {
+  try {
+    const response = await http.post<unknown>(path, input);
+    const parsed = passwordResetResponseSchema.safeParse(response.data);
+    if (!parsed.success) throw new Error("The server returned an unexpected password reset response.");
+    return parsed.data.message;
+  } catch (error: unknown) {
+    if (axios.isAxiosError<unknown>(error)) {
+      const parsed = errorResponseSchema.safeParse(error.response?.data);
+      throw new Error(parsed.success ? parsed.data.message : "Unable to complete password reset. Please try again.", { cause: error });
+    }
+    throw error;
+  }
+}
+
+export async function requestPasswordReset(email: string): Promise<string> {
+  const parsed = forgotPasswordInputSchema.safeParse({ email });
+  if (!parsed.success) throw new Error(parsed.error.issues[0].message);
+  return passwordResetRequest("/auth/forgot-password", parsed.data);
+}
+
+export async function resetPassword(token: string, password: string): Promise<string> {
+  const parsed = resetPasswordInputSchema.safeParse({ token, password });
+  if (!parsed.success) throw new Error(parsed.error.issues[0].message);
+  return passwordResetRequest("/auth/reset-password", parsed.data);
 }

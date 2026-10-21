@@ -1,12 +1,13 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { supabase } from "../lib/supabase";
+import { useAuth } from "../hooks/useAuth";
 import { AuthShell } from "../components/auth/AuthShell";
 import { FormAlert } from "../components/auth/FormAlert";
 import { SignUpForm } from "../components/auth/SignUpForm";
 
 const SignUpPage = () => {
   const navigate = useNavigate();
+  const { signUp } = useAuth();
 
   useEffect(() => {
     document.title = "Get Started | Invoicely";
@@ -28,38 +29,11 @@ const SignUpPage = () => {
     setError(null);
 
     try {
-      // 1. Call supabase.auth.signUp with email and password
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-      });
-
-      if (signUpError) {
-        throw signUpError;
-      }
-
-      const user = data.user;
-      if (!user) {
-        throw new Error("Could not create user account. Please try again.");
-      }
-
-      // 2. On success, insert a row into the profiles table
-      const { error: profileError } = await supabase.from("profiles").insert({
-        id: user.id,
-        first_name: firstName,
-        last_name: lastName,
-        email: email,
-      });
-
-      if (profileError) {
-        throw profileError;
-      }
-
-      // 3. Redirect to /invoices
+      await signUp({ firstName, lastName, email, password });
+      // AuthProvider now has the full profile before opening the dashboard.
       navigate("/invoices");
-    } catch (err) {
-      const error = err as Error;
-      setError(error.message || "An unexpected error occurred during sign up.");
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : "Unable to create your account. Please try again.");
     } finally {
       setLoading(false);
     }
